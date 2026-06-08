@@ -38,12 +38,13 @@ export async function requireSession(): Promise<Session> {
 }
 
 /**
- * Require a specific role. Redirects unauthenticated users to login and
- * insufficiently-privileged users to /admin (the dashboard they can see).
+ * Require one of the given roles. Redirects unauthenticated users to login and
+ * insufficiently-privileged users back to /admin (which routes them to a page
+ * they can see).
  */
-export async function requireRole(role: Role): Promise<Session> {
+export async function requireRole(...allowed: Role[]): Promise<Session> {
   const session = await requireSession();
-  if (role === "owner" && session.role !== "owner") {
+  if (!allowed.includes(session.role)) {
     redirect("/admin?error=forbidden");
   }
   return session;

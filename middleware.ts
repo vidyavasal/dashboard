@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { COOKIE_NAME, verifyJWT } from "./src/lib/auth";
 import { normalizeRole } from "./src/lib/roles";
 
-// Routes that finance-restricted (`sales`) users must never reach.
+// Finance + org admin — owners only.
 const OWNER_ONLY_PREFIXES = [
   "/admin/finance",
   "/admin/staff",
@@ -10,6 +10,9 @@ const OWNER_ONLY_PREFIXES = [
   "/admin/dashboard",
   "/admin/reports",
 ];
+
+// Content + invoicing — owners and hired `staff`, but NOT `sales`.
+const STAFF_PLUS_PREFIXES = ["/admin/content", "/admin/invoices"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -31,12 +34,18 @@ export async function middleware(req: NextRequest) {
 
   const role = normalizeRole(payload.role);
 
-  if (role === "sales" && OWNER_ONLY_PREFIXES.some((p) => pathname.startsWith(p))) {
+  const deny = () => {
     const url = req.nextUrl.clone();
     url.pathname = "/admin/students";
     url.searchParams.set("error", "forbidden");
     return NextResponse.redirect(url);
-  }
+  };
+
+  const hitsOwnerOnly = OWNER_ONLY_PREFIXES.some((p) => pathname.startsWith(p));
+  const hitsStaffPlus = STAFF_PLUS_PREFIXES.some((p) => pathname.startsWith(p));
+
+  if (role === "sales" && (hitsOwnerOnly || hitsStaffPlus)) return deny();
+  if (role === "staff" && hitsOwnerOnly) return deny();
 
   return NextResponse.next();
 }

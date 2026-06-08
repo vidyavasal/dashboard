@@ -1,6 +1,12 @@
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
-import * as schema from "./schema";
+import * as trackerSchema from "./schema";
+import * as externalSchema from "./external";
+
+// Tracker-owned tables + the main site's mirrored content/auth tables. Both are
+// registered so the runtime db is fully typed for content CRUD, even though
+// drizzle-kit only ever migrates the tracker-owned tables (./schema.ts).
+const schema = { ...trackerSchema, ...externalSchema };
 
 /**
  * Creates a Neon HTTP database connection.

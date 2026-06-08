@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { adminUsers } from "@/lib/db/shared";
+import { adminUsers } from "@/lib/db/external";
 import {
   COOKIE_NAME,
   COOKIE_MAX_AGE,

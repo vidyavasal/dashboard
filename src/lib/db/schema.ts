@@ -7,6 +7,7 @@ import {
   timestamp,
   numeric,
   date,
+  integer,
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
@@ -207,6 +208,93 @@ export const investments = pgTable(
   (table) => [index("idx_tracker_investments_partner").on(table.partner)]
 );
 
+// ---------------------------------------------------------------------------
+// Blog posts — tracker-owned. The public site will read these (replacing its
+// hardcoded posts array, Phase 9.1). Named `blog_posts` (not tracker_*) so the
+// public renderer can read it under a natural name.
+// ---------------------------------------------------------------------------
+export const blogPosts = pgTable(
+  "blog_posts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: varchar("title", { length: 255 }).notNull(),
+    slug: varchar("slug", { length: 255 }).notNull().unique(),
+    excerpt: text("excerpt"),
+    coverImage: text("cover_image"),
+    body: text("body"), // markdown
+    author: varchar("author", { length: 255 }),
+    status: varchar("status", { length: 20 }).default("draft"), // draft | published
+    publishedAt: timestamp("published_at"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("idx_blog_posts_status").on(table.status),
+    index("idx_blog_posts_published").on(table.publishedAt),
+  ]
+);
+
+// ---------------------------------------------------------------------------
+// Invoices — tracker-owned. Student fee receipts, staff salary slips, or
+// manual invoices. `seq` is a DB identity column; the human invoice number is
+// derived from it (e.g. INV-0001) so it is sequential per database/env.
+// ---------------------------------------------------------------------------
+export const invoices = pgTable(
+  "tracker_invoices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    seq: integer("seq").generatedAlwaysAsIdentity(),
+    type: varchar("type", { length: 20 }).notNull().default("other"), // student_fee | staff_salary | other
+    // Soft references (no FK so cancelling a student/staff never blocks an
+    // already-issued invoice): party_id may be a tracker_students/staff id.
+    partyType: varchar("party_type", { length: 20 }), // student | staff | other
+    partyId: uuid("party_id"),
+    partyName: varchar("party_name", { length: 255 }),
+    invoiceDate: date("invoice_date"),
+    dueDate: date("due_date"),
+    subtotal: numeric("subtotal", { precision: 12, scale: 2 }),
+    tax: numeric("tax", { precision: 12, scale: 2 }),
+    total: numeric("total", { precision: 12, scale: 2 }),
+    amountPaid: numeric("amount_paid", { precision: 12, scale: 2 }).default("0"),
+    status: varchar("status", { length: 20 }).default("draft"), // draft | issued | paid | cancelled
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("idx_tracker_invoices_seq").on(table.seq),
+    index("idx_tracker_invoices_type").on(table.type),
+    index("idx_tracker_invoices_status").on(table.status),
+  ]
+);
+
+export const invoiceItems = pgTable(
+  "tracker_invoice_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    invoiceId: uuid("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "cascade" }),
+    description: text("description"),
+    quantity: numeric("quantity", { precision: 10, scale: 2 }).default("1"),
+    unitPrice: numeric("unit_price", { precision: 12, scale: 2 }),
+    amount: numeric("amount", { precision: 12, scale: 2 }),
+    sortOrder: integer("sort_order"),
+  },
+  (table) => [index("idx_tracker_invoice_items_invoice").on(table.invoiceId)]
+);
+
+export const invoicesRelations = relations(invoices, ({ many }) => ({
+  items: many(invoiceItems),
+}));
+
+export const invoiceItemsRelations = relations(invoiceItems, ({ one }) => ({
+  invoice: one(invoices, {
+    fields: [invoiceItems.invoiceId],
+    references: [invoices.id],
+  }),
+}));
+
 // ============================================================================
 // Type Exports
 // ============================================================================
@@ -223,3 +311,9 @@ export type Expense = typeof expenses.$inferSelect;
 export type NewExpense = typeof expenses.$inferInsert;
 export type Investment = typeof investments.$inferSelect;
 export type NewInvestment = typeof investments.$inferInsert;
+export type BlogPost = typeof blogPosts.$inferSelect;
+export type NewBlogPost = typeof blogPosts.$inferInsert;
+export type Invoice = typeof invoices.$inferSelect;
+export type NewInvoice = typeof invoices.$inferInsert;
+export type InvoiceItem = typeof invoiceItems.$inferSelect;
+export type NewInvoiceItem = typeof invoiceItems.$inferInsert;

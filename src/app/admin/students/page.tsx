@@ -2,7 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { students, staff } from "@/lib/db/schema";
-import { universities, courses } from "@/lib/db/shared";
+import { universities, courses } from "@/lib/db/external";
 import { requireSession } from "@/lib/session";
 import { getStaffIdForUser } from "@/lib/lookups";
 import {

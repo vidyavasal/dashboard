@@ -18,6 +18,60 @@ Both apps share **one Neon database** (two environments: staging + prod).
 
 ---
 
+## 📋 Current status (audited 2026-06-08)
+
+Build typechecks, lints and `next build` clean (37 routes). Done vs remaining:
+
+| Area | Status |
+|------|--------|
+| Scaffold (config, layout, middleware, boots) | ✅ done |
+| Auth + session + roles (owner / **staff** / sales) | ✅ done (3-role model) |
+| Business CRUD: staff, students, commissions, salaries, expenses, investments | ✅ done (Phase 5) |
+| Reports + dashboard + CSV export | ✅ done (Phase 7) |
+| Import script + `external.ts` content mirror | ✅ done (Phase 8 tooling) |
+| Content CRUD: universities, courses, fees | ✅ done (Phase 4.1–4.2) |
+| ImageKit upload route + `IMAGEKIT_*` env | ✅ done (Phase 3.2) |
+| Editor components (Image/Gallery/Highlights/Markdown/Tab) | ✅ done (Phase 3.1) |
+| Blog (`blog_posts` table + CRUD) | ✅ done (Phase 4.3) |
+| Invoicing (student receipts / salary slips / manual + print) | ✅ done (Phase 6) |
+| Migration applied to staging **and** production | ✅ done (Phase 1, `0000` + `0001`) |
+| **Decommission main-site admin** | ⏳ pending sign-off (Phase 9 — destructive, edits the OTHER repo) |
+| **Vercel deployment (2 envs + domains)** | ⏳ pending (Phase 10 — needs Vercel project) |
+
+**Remaining work:** Phase 9 (decommission the main site's admin) and Phase 10
+(deploy). Both are intentionally held: Phase 9 deletes the main site's admin and
+should only run after the tracker is verified in production; Phase 10 needs a
+Vercel project + the `IMAGEKIT_*` keys set per environment.
+
+Notes:
+- The mirror lives in `src/lib/db/external.ts` (full content columns), wired into
+  `db` alongside the tracker schema; drizzle-kit still only migrates tracker tables.
+- Role mapping: existing `admin_users.role = "admin"` rows are the OWNERS, so
+  `admin` → **owner** (full). Give a hired user limited access (content +
+  admissions + invoicing, no finance) by setting their role to **`staff`**.
+- Content editing + invoicing are gated to `owner` + `staff`; finance/dashboard/
+  reports/org-admin stay `owner`-only; `sales` keeps admissions-only (own rows).
+- Set real `IMAGEKIT_*` keys in `.env.local` (and Vercel) before image uploads work.
+
+---
+
+## 🌐 Domains & environment mapping
+
+| Domain | App | Database | Vercel env |
+|--------|-----|----------|------------|
+| `vidyavasal.com` | main public site (existing) | shared | Production |
+| `panel.vidyavasal.com` | **tracker** (prod) | **prod** Neon URL | Production |
+| `staging.panel.vidyavasal.com` | **tracker** (staging) | **staging** Neon URL | Preview (or a staging branch/alias) |
+
+- One Vercel project for the tracker; set `DATABASE_URL` per environment
+  (Production→prod, Preview→staging), plus `ADMIN_JWT_SECRET` + `IMAGEKIT_*` in both.
+- Assign `panel.vidyavasal.com` to Production and `staging.panel.vidyavasal.com`
+  to the Preview/staging deployment (Vercel domain → environment assignment).
+- If you want shared login cookies across `vidyavasal.com` and `panel.vidyavasal.com`,
+  set the auth cookie `Domain=.vidyavasal.com` and use the same `ADMIN_JWT_SECRET`.
+
+---
+
 ## 🔑 Two environments — read this first
 
 Two databases: **staging** and **production**, sharing the SAME schema.
