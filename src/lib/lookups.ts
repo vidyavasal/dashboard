@@ -1,6 +1,6 @@
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { universities, courses } from "@/lib/db/shared";
+import { universities, courses } from "@/lib/db/external";
 import { staff, universityCommissions } from "@/lib/db/schema";
 
 /** Active universities for dropdowns. */

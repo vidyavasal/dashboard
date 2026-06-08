@@ -17,7 +17,7 @@ export default async function AdminLayout({
 
   return (
     <div className="min-h-screen flex">
-      <aside className="w-60 shrink-0 border-r border-border bg-white flex flex-col">
+      <aside className="w-60 shrink-0 border-r border-border bg-white flex flex-col print:hidden">
         <div className="px-5 py-5 border-b border-border">
           <div className="flex items-center gap-2.5">
             <div className="h-8 w-8 rounded-lg bg-primary text-white grid place-items-center text-sm font-bold">
