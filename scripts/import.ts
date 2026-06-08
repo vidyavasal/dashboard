@@ -34,7 +34,7 @@ import {
   investments,
   universityCommissions,
 } from "../src/lib/db/schema";
-import { universities, courses } from "../src/lib/db/shared";
+import { universities, courses } from "../src/lib/db/external";
 import { computeCommission } from "../src/lib/commission-model";
 
 const DRY = process.argv.includes("--dry");

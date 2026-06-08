@@ -2,7 +2,7 @@ import { asc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { universityCommissions } from "@/lib/db/schema";
-import { universities } from "@/lib/db/shared";
+import { universities } from "@/lib/db/external";
 import { requireRole } from "@/lib/session";
 import { PageHeader, ButtonLink, Table, Th, Td } from "@/components/ui";
 import { DeleteButton } from "@/components/DeleteButton";

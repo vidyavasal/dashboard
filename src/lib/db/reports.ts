@@ -1,7 +1,7 @@
 import { sql, eq, desc } from "drizzle-orm";
 import { db } from "./index";
 import { students, expenses, salaries, staff, investments } from "./schema";
-import { universities } from "./shared";
+import { universities } from "./external";
 import { toNumber } from "@/lib/format";
 
 // ============================================================================
