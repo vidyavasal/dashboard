@@ -258,6 +258,60 @@ Only after Phases 4–6 are verified in production.
 
 ---
 
+## Phase 11 — Lead portal + student profile management  ⭐ (built 2026-06-10)
+
+Pipeline: **public lead form → Leads panel → Convert (separate profile record)
+→ dynamic per-student link → Mark admitted → copy into Admissions.**
+A converted lead is NEVER mutated into a profile — the lead row stays intact
+and a new `tracker_student_profiles` row is created and linked.
+
+- [x] **11.1 Tables** (tracker-owned, migration `drizzle/0002_oval_the_hood.sql`,
+  applied to **staging**; run `npm run db:migrate:prod` when verified):
+  - `tracker_leads` — name + phone mandatory; email/age/sex/program level/
+    university/course optional; status + sub-status; source (web_form |
+    manual | csv_import); assigned staff; follow-up date; notes.
+  - `tracker_student_profiles` — unique `form_token` (dynamic link),
+    `lead_id` (unique, set null), full profile fields, pipeline status,
+    `admitted_student_id` → tracker_students. Cross-app FKs to
+    universities/courses added by hand (guarded), same as 0000.
+- [x] **11.2 Status taxonomy** — `src/lib/lead-status.ts` is the SINGLE source
+  for lead statuses + per-status sub-statuses ("further status"), profile
+  statuses, program levels (+1/+2/Degree/PG/Diploma), sexes, sources, and the
+  CSV import header. Edit lists there; forms/filters/badges follow.
+- [x] **11.3 Public pages** (middleware only guards /admin/*):
+  - `/lead` — shareable lead form; name + mobile mandatory, rest optional.
+  - `/profile/<token>` — per-student dynamic form; editable until the profile
+    reaches admission_processing; first save flips status to
+    profile_submitted. "Regenerate" on the admin profile invalidates a link.
+- [x] **11.4 /admin/leads** (all roles; delete = owner/staff) — status tabs
+  with counts, filters (sub-status, university, course, program level, source,
+  created date range), search (name/mobile/email), pagination, Convert button,
+  CSV import (`/admin/leads/import`, template at .../import/template) and
+  filtered Excel/CSV export (`/admin/leads/export`).
+- [x] **11.5 /admin/profiles** (all roles; delete = owner/staff) — status tabs,
+  filters (university, course, program level, created + admitted date ranges),
+  search, pagination, copy-link, filtered export. Profile editor has the
+  student fields + internal-only status/assignee/notes, the dynamic link box,
+  and **Mark admitted** → copies into `tracker_students` with commission % +
+  incentive auto-filled from `tracker_university_commissions`, links back, and
+  lands on the admission to complete fee/collected.
+- [x] **11.6 Admissions list upgraded** — search, university/course/payment/
+  exec filters, admission-date range, pagination, filtered export
+  (`/admin/students/export`; sales = own rows, no profit columns).
+- [x] **11.7 Shared plumbing** — `src/lib/csv.ts` (RFC-4180 + BOM, parser),
+  `src/lib/db/{leads,profiles,students}-query.ts` (one filter parser shared by
+  page + export so the file always matches the screen), `Pagination`,
+  `FilterBar`, `CopyLinkButton`.
+- [ ] **11.8 Prod migration** — after staging verification:
+  `npm run db:migrate:prod`.
+
+Note: tracker leads live in `tracker_leads` (tracker-owned). The main site's
+`leads` table (contact-form/analytics) is untouched and still read by
+/admin/analytics; the tracker schema exports its table as `trackerLeads` to
+avoid the name clash in the merged runtime schema.
+
+---
+
 ## Build order summary
 `0.4–0.6 → 1.* → 2.* → 3.* → 4.* → 5.* → 6.* → 7.* → 8.* → (verify in prod) → 9.* → 10.*`
 

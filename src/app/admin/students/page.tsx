@@ -1,10 +1,17 @@
-import { desc, eq } from "drizzle-orm";
 import Link from "next/link";
-import { db } from "@/lib/db";
-import { students, staff } from "@/lib/db/schema";
-import { universities, courses } from "@/lib/db/external";
 import { requireSession } from "@/lib/session";
-import { getStaffIdForUser } from "@/lib/lookups";
+import {
+  getStaffIdForUser,
+  getUniversityOptions,
+  getCourseOptions,
+  getStaffOptions,
+} from "@/lib/lookups";
+import {
+  parseStudentFilters,
+  studentFilterParams,
+  hasStudentFilters,
+  queryStudents,
+} from "@/lib/db/students-query";
 import {
   PageHeader,
   ButtonLink,
@@ -14,46 +21,43 @@ import {
   StatusBadge,
   Card,
 } from "@/components/ui";
+import { StudentFilters } from "./StudentFilters";
+import { Pagination, parsePagination } from "@/components/Pagination";
 import { DeleteButton } from "@/components/DeleteButton";
 import { formatMoney, formatDate } from "@/lib/format";
 import { deleteStudent } from "./actions";
 
-export default async function StudentsPage() {
-  const session = await requireSession();
+export const metadata = { title: "Admissions" };
 
-  // Sales execs see only their own admissions; owners see all.
-  let ownStaffId: string | null = null;
+export default async function StudentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const session = await requireSession();
+  const sp = await searchParams;
+  const filters = parseStudentFilters(sp);
+  const { page, pageSize } = parsePagination(sp);
+
+  // Sales execs see only their own admissions; owners/staff see all.
+  let pinnedStaffId: string | null | undefined = undefined;
   if (session.role === "sales") {
-    ownStaffId = await getStaffIdForUser(session.id);
+    pinnedStaffId = await getStaffIdForUser(session.id);
   }
 
-  const base = db
-    .select({
-      id: students.id,
-      admissionDate: students.admissionDate,
-      studentName: students.studentName,
-      universityName: universities.name,
-      courseName: courses.name,
-      collected: students.collectedFromStudent,
-      iodeProfit: students.iodeProfit,
-      incentive: students.incentive,
-      execName: staff.name,
-      paymentStatus: students.paymentStatus,
-    })
-    .from(students)
-    .leftJoin(universities, eq(students.universityId, universities.id))
-    .leftJoin(courses, eq(students.courseId, courses.id))
-    .leftJoin(staff, eq(students.salesExecutiveId, staff.id))
-    .orderBy(desc(students.admissionDate));
-
-  const rows =
-    session.role === "sales"
-      ? await base.where(
-          eq(students.salesExecutiveId, ownStaffId ?? "00000000-0000-0000-0000-000000000000")
-        )
-      : await base;
-
   const isOwner = session.role === "owner";
+
+  const [{ rows, total }, universityOptions, courses, staffOptions] =
+    await Promise.all([
+      queryStudents(filters, page, pageSize, pinnedStaffId),
+      getUniversityOptions(),
+      getCourseOptions(),
+      isOwner ? getStaffOptions() : Promise.resolve([]),
+    ]);
+
+  const params = studentFilterParams(filters);
+  const exportQs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) if (v) exportQs.set(k, v);
 
   return (
     <>
@@ -65,19 +69,37 @@ export default async function StudentsPage() {
             : "Your admissions. Profit/finance columns are owner-only."
         }
         action={
-          <ButtonLink href="/admin/students/new">+ Add admission</ButtonLink>
+          <div className="flex items-center gap-2">
+            <ButtonLink
+              href={`/admin/students/export?${exportQs.toString()}`}
+              variant="ghost"
+            >
+              ⬇ Export Excel
+            </ButtonLink>
+            <ButtonLink href="/admin/students/new">+ Add admission</ButtonLink>
+          </div>
         }
       />
 
-      {session.role === "sales" && !ownStaffId && (
+      {session.role === "sales" && !pinnedStaffId && (
         <Card className="p-4 mb-4 bg-amber-50 border-amber-200 text-amber-800 text-sm">
           Your login isn&apos;t linked to a staff record yet, so no admissions
           are shown. Ask an owner to link your account under Staff.
         </Card>
       )}
 
+      <StudentFilters
+        filters={filters}
+        universityOptions={universityOptions}
+        courses={courses}
+        staffOptions={staffOptions}
+        isOwner={isOwner}
+        hasActiveFilters={hasStudentFilters(filters)}
+      />
+
       <Table
         isEmpty={rows.length === 0}
+        empty="No admissions match these filters."
         head={
           <>
             <Th>Date</Th>
@@ -124,6 +146,14 @@ export default async function StudentsPage() {
           </tr>
         ))}
       </Table>
+
+      <Pagination
+        basePath="/admin/students"
+        params={params}
+        page={page}
+        pageSize={pageSize}
+        total={total}
+      />
     </>
   );
 }
