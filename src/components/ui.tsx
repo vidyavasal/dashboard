@@ -138,13 +138,18 @@ export function Td({
   children,
   align = "left",
   className = "",
+  title,
 }: {
   children?: React.ReactNode;
   align?: "left" | "right" | "center";
   className?: string;
+  /** Native tooltip — useful when the cell content is truncated. */
+  title?: string;
 }) {
   return (
-    <td className={`px-4 py-3 text-${align} ${className}`}>{children}</td>
+    <td title={title} className={`px-4 py-3 text-${align} ${className}`}>
+      {children}
+    </td>
   );
 }
 
@@ -156,16 +161,38 @@ const STATUS_STYLES: Record<string, string> = {
   paid: "bg-green-50 text-green-700 border-green-200",
   pending: "bg-amber-50 text-amber-700 border-amber-200",
   partial: "bg-blue-50 text-blue-700 border-blue-200",
+  // Lead pipeline (values from src/lib/lead-status.ts)
+  new: "bg-blue-50 text-blue-700 border-blue-200",
+  contacted: "bg-sky-50 text-sky-700 border-sky-200",
+  follow_up: "bg-amber-50 text-amber-700 border-amber-200",
+  interested: "bg-violet-50 text-violet-700 border-violet-200",
+  not_interested: "bg-gray-100 text-gray-600 border-gray-200",
+  converted: "bg-green-50 text-green-700 border-green-200",
+  lost: "bg-red-50 text-red-700 border-red-200",
+  // Student-profile pipeline
+  profile_pending: "bg-amber-50 text-amber-700 border-amber-200",
+  profile_submitted: "bg-blue-50 text-blue-700 border-blue-200",
+  docs_pending: "bg-orange-50 text-orange-700 border-orange-200",
+  admission_processing: "bg-violet-50 text-violet-700 border-violet-200",
+  admitted: "bg-green-50 text-green-700 border-green-200",
+  dropped: "bg-red-50 text-red-700 border-red-200",
 };
 
-export function StatusBadge({ status }: { status: string | null }) {
+export function StatusBadge({
+  status,
+  label,
+}: {
+  status: string | null;
+  /** Display text override (e.g. "Follow-up" for status value "follow_up"). */
+  label?: string;
+}) {
   const key = (status ?? "").toLowerCase();
   const cls = STATUS_STYLES[key] ?? "bg-gray-100 text-gray-600 border-gray-200";
   return (
     <span
       className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${cls}`}
     >
-      {status ?? "—"}
+      {label ?? status ?? "—"}
     </span>
   );
 }

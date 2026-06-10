@@ -15,6 +15,13 @@
       "when": 1780903773986,
       "tag": "0001_white_jigsaw",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781105897300,
+      "tag": "0002_oval_the_hood",
+      "breakpoints": true
     }
   ]
 }
