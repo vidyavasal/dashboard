@@ -127,6 +127,56 @@ export const courseFeeBreakdowns = pgTable("course_fee_breakdowns", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ── Analytics / tracking tables (also main-site owned) ───────────────────────
+// Mirrors the main site's visitors / page_views / leads tables so the tracker
+// panel can READ them for the analytics dashboard. Read-only from here.
+
+export const visitors = pgTable("visitors", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  country: varchar("country", { length: 2 }),
+  city: varchar("city", { length: 120 }),
+  region: varchar("region", { length: 120 }),
+  device: varchar("device", { length: 20 }),
+  browser: varchar("browser", { length: 60 }),
+  os: varchar("os", { length: 60 }),
+  referrer: text("referrer"),
+  landingPath: text("landing_path"),
+  utmSource: varchar("utm_source", { length: 120 }),
+  utmMedium: varchar("utm_medium", { length: 120 }),
+  utmCampaign: varchar("utm_campaign", { length: 120 }),
+  visitCount: integer("visit_count").default(1),
+  firstSeen: timestamp("first_seen").defaultNow(),
+  lastSeen: timestamp("last_seen").defaultNow(),
+});
+
+export const pageViews = pgTable("page_views", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  visitorId: uuid("visitor_id"),
+  event: varchar("event", { length: 40 }).default("page_view"),
+  path: text("path"),
+  entityType: varchar("entity_type", { length: 20 }),
+  entityId: uuid("entity_id"),
+  referrer: text("referrer"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const leads = pgTable("leads", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }),
+  phone: varchar("phone", { length: 30 }),
+  email: varchar("email", { length: 255 }),
+  message: text("message"),
+  source: varchar("source", { length: 60 }),
+  status: varchar("status", { length: 30 }).default("new"),
+  visitorId: uuid("visitor_id"),
+  universityId: uuid("university_id"),
+  courseId: uuid("course_id"),
+  utmSource: varchar("utm_source", { length: 120 }),
+  utmMedium: varchar("utm_medium", { length: 120 }),
+  utmCampaign: varchar("utm_campaign", { length: 120 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // ── Types ────────────────────────────────────────────────────────────────────
 export type AdminUser = typeof adminUsers.$inferSelect;
 export type University = typeof universities.$inferSelect;
@@ -136,3 +186,6 @@ export type Course = typeof courses.$inferSelect;
 export type NewCourse = typeof courses.$inferInsert;
 export type CourseFeeStructure = typeof courseFeeStructures.$inferSelect;
 export type CourseFeeBreakdown = typeof courseFeeBreakdowns.$inferSelect;
+export type Visitor = typeof visitors.$inferSelect;
+export type PageView = typeof pageViews.$inferSelect;
+export type Lead = typeof leads.$inferSelect;

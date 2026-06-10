@@ -295,6 +295,139 @@ export const invoiceItemsRelations = relations(invoiceItems, ({ one }) => ({
   }),
 }));
 
+// ---------------------------------------------------------------------------
+// Leads — the lead portal. Captured from the public /lead form, manual entry,
+// or CSV import. Name + phone are the only mandatory fields. Status +
+// sub-status values live in src/lib/lead-status.ts (single source of truth).
+// A converted lead gets a SEPARATE tracker_student_profiles row (linked via
+// student_profiles.lead_id) — the lead row itself is never mutated into a
+// profile, so the original lead data stays intact.
+// ---------------------------------------------------------------------------
+export const trackerLeads = pgTable(
+  "tracker_leads",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 255 }).notNull(),
+    phone: varchar("phone", { length: 30 }).notNull(),
+    email: varchar("email", { length: 255 }),
+    age: integer("age"),
+    sex: varchar("sex", { length: 10 }), // male | female | other
+    programLevel: varchar("program_level", { length: 30 }), // plus_one | plus_two | degree | pg | diploma | other
+    // Cross-app references (uuid only, FK added by hand in migration).
+    universityId: uuid("university_id"),
+    courseId: uuid("course_id"),
+    status: varchar("status", { length: 40 }).default("new"),
+    subStatus: varchar("sub_status", { length: 80 }),
+    source: varchar("source", { length: 60 }).default("web_form"), // web_form | manual | csv_import
+    assignedToId: uuid("assigned_to_id").references(() => staff.id, {
+      onDelete: "set null",
+    }),
+    followUpDate: date("follow_up_date"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("idx_tracker_leads_status").on(table.status),
+    index("idx_tracker_leads_created").on(table.createdAt),
+    index("idx_tracker_leads_university").on(table.universityId),
+    index("idx_tracker_leads_phone").on(table.phone),
+  ]
+);
+
+// ---------------------------------------------------------------------------
+// Student profiles — created when a lead is CONVERTED (or standalone). Holds
+// the full admission-related data. `form_token` powers the dynamic public
+// link (/profile/<token>) the student uses to fill their own data; staff can
+// edit the same record from the admin panel. When the profile is admitted, a
+// COPY is written to tracker_students (the internal admissions ledger) and
+// linked back via admitted_student_id.
+// ---------------------------------------------------------------------------
+export const studentProfiles = pgTable(
+  "tracker_student_profiles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    leadId: uuid("lead_id").references(() => trackerLeads.id, {
+      onDelete: "set null",
+    }),
+    formToken: varchar("form_token", { length: 64 }).notNull(),
+    status: varchar("status", { length: 40 }).default("profile_pending"),
+    // Basics (copied from the lead at convert time, then editable).
+    name: varchar("name", { length: 255 }).notNull(),
+    phone: varchar("phone", { length: 30 }).notNull(),
+    email: varchar("email", { length: 255 }),
+    age: integer("age"),
+    sex: varchar("sex", { length: 10 }),
+    dob: date("dob"),
+    guardianName: varchar("guardian_name", { length: 255 }),
+    guardianPhone: varchar("guardian_phone", { length: 30 }),
+    address: text("address"),
+    district: varchar("district", { length: 120 }),
+    state: varchar("state", { length: 120 }),
+    pincode: varchar("pincode", { length: 10 }),
+    // Intended admission.
+    programLevel: varchar("program_level", { length: 30 }),
+    // Cross-app references (uuid only, FK added by hand in migration).
+    universityId: uuid("university_id"),
+    courseId: uuid("course_id"),
+    // Prior education.
+    lastInstitution: varchar("last_institution", { length: 255 }),
+    lastQualification: varchar("last_qualification", { length: 120 }),
+    yearOfPassing: varchar("year_of_passing", { length: 10 }),
+    marksPercent: varchar("marks_percent", { length: 20 }),
+    documentsNote: text("documents_note"),
+    notes: text("notes"),
+    assignedToId: uuid("assigned_to_id").references(() => staff.id, {
+      onDelete: "set null",
+    }),
+    profileSubmittedAt: timestamp("profile_submitted_at"),
+    admissionDate: date("admission_date"),
+    admittedStudentId: uuid("admitted_student_id").references(
+      () => students.id,
+      { onDelete: "set null" }
+    ),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("idx_tracker_profiles_token").on(table.formToken),
+    uniqueIndex("idx_tracker_profiles_lead").on(table.leadId),
+    index("idx_tracker_profiles_status").on(table.status),
+    index("idx_tracker_profiles_university").on(table.universityId),
+    index("idx_tracker_profiles_created").on(table.createdAt),
+    index("idx_tracker_profiles_admission_date").on(table.admissionDate),
+  ]
+);
+
+export const trackerLeadsRelations = relations(trackerLeads, ({ one }) => ({
+  assignedTo: one(staff, {
+    fields: [trackerLeads.assignedToId],
+    references: [staff.id],
+  }),
+  profile: one(studentProfiles, {
+    fields: [trackerLeads.id],
+    references: [studentProfiles.leadId],
+  }),
+}));
+
+export const studentProfilesRelations = relations(
+  studentProfiles,
+  ({ one }) => ({
+    lead: one(trackerLeads, {
+      fields: [studentProfiles.leadId],
+      references: [trackerLeads.id],
+    }),
+    assignedTo: one(staff, {
+      fields: [studentProfiles.assignedToId],
+      references: [staff.id],
+    }),
+    admittedStudent: one(students, {
+      fields: [studentProfiles.admittedStudentId],
+      references: [students.id],
+    }),
+  })
+);
+
 // ============================================================================
 // Type Exports
 // ============================================================================
@@ -317,3 +450,7 @@ export type Invoice = typeof invoices.$inferSelect;
 export type NewInvoice = typeof invoices.$inferInsert;
 export type InvoiceItem = typeof invoiceItems.$inferSelect;
 export type NewInvoiceItem = typeof invoiceItems.$inferInsert;
+export type TrackerLead = typeof trackerLeads.$inferSelect;
+export type NewTrackerLead = typeof trackerLeads.$inferInsert;
+export type StudentProfile = typeof studentProfiles.$inferSelect;
+export type NewStudentProfile = typeof studentProfiles.$inferInsert;
