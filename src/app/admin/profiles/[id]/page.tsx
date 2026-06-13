@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { studentProfiles, trackerLeads } from "@/lib/db/schema";
+import { studentProfiles, trackerLeads, staff } from "@/lib/db/schema";
+import { universities, courses as coursesTable } from "@/lib/db/external";
 import { requireSession } from "@/lib/session";
 import {
   getUniversityOptions,
@@ -11,31 +12,45 @@ import {
 } from "@/lib/lookups";
 import { Card, StatusBadge } from "@/components/ui";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
+import { PendingButton } from "@/components/PendingButton";
 import { profileStatusLabel } from "@/lib/lead-status";
 import { formatDate } from "@/lib/format";
-import { ProfileForm } from "../ProfileForm";
+import { todayStr } from "@/lib/dates";
+import { ProfileDetails } from "./ProfileDetails";
 import { markAdmitted, regenerateLink } from "../actions";
+import { decodeId, encodeId } from "@/lib/ids";
 
 export const metadata = { title: "Student profile" };
 
-export default async function EditProfilePage({
+export default async function ProfileDetailsPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   await requireSession();
-  const { id } = await params;
+  const { id: idToken } = await params;
+  const id = decodeId(idToken);
+  if (!id) notFound();
 
-  const [record] = await db
-    .select()
+  const [row] = await db
+    .select({
+      profile: studentProfiles,
+      universityName: universities.name,
+      courseName: coursesTable.name,
+      assignedToName: staff.name,
+    })
     .from(studentProfiles)
+    .leftJoin(universities, eq(studentProfiles.universityId, universities.id))
+    .leftJoin(coursesTable, eq(studentProfiles.courseId, coursesTable.id))
+    .leftJoin(staff, eq(studentProfiles.assignedToId, staff.id))
     .where(eq(studentProfiles.id, id))
     .limit(1);
-  if (!record) notFound();
+  if (!row) notFound();
+  const record = row.profile;
 
   const [lead] = record.leadId
     ? await db
-        .select({ id: trackerLeads.id, name: trackerLeads.name })
+        .select({ id: trackerLeads.id })
         .from(trackerLeads)
         .where(eq(trackerLeads.id, record.leadId))
         .limit(1)
@@ -52,15 +67,6 @@ export default async function EditProfilePage({
 
   return (
     <>
-      <div className="mb-4">
-        <Link
-          href="/admin/profiles"
-          className="text-sm text-text-secondary hover:text-text-primary"
-        >
-          ← Student profiles
-        </Link>
-      </div>
-
       {/* Summary card */}
       <Card className="p-5 mb-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -83,7 +89,7 @@ export default async function EditProfilePage({
                 {record.email && <span>✉️ {record.email}</span>}
                 {record.profileSubmittedAt && (
                   <span>
-                    Student submitted: {formatDate(record.profileSubmittedAt)}
+                    Student last submitted: {formatDate(record.profileSubmittedAt)}
                   </span>
                 )}
                 {record.admissionDate && (
@@ -93,7 +99,7 @@ export default async function EditProfilePage({
                 )}
                 {lead && (
                   <Link
-                    href={`/admin/leads/${lead.id}`}
+                    href={`/admin/leads/${encodeId(lead.id)}`}
                     className="text-primary hover:underline"
                   >
                     View original lead →
@@ -103,35 +109,41 @@ export default async function EditProfilePage({
             </div>
           </div>
 
-          {record.admittedStudentId ? (
+          <div className="flex flex-wrap items-end gap-3">
             <Link
-              href={`/admin/students/${record.admittedStudentId}`}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium bg-green-600 hover:bg-green-700 text-white transition-colors"
+              href={`/admin/profiles/${encodeId(record.id)}/fill`}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium border border-primary text-primary hover:bg-primary-light transition-colors"
             >
-              Open admission →
+              📋 Fill university portal
             </Link>
-          ) : (
-            <form action={markAdmitted} className="flex items-end gap-2">
-              <input type="hidden" name="id" value={record.id} />
-              <label className="block">
-                <span className="block text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">
-                  Admission date
-                </span>
-                <input
-                  type="date"
-                  name="admissionDate"
-                  defaultValue={new Date().toISOString().slice(0, 10)}
-                  className="h-9 px-2.5 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </label>
-              <button
-                type="submit"
-                className="h-9 inline-flex items-center gap-1.5 rounded-lg px-3.5 text-sm font-medium bg-green-600 hover:bg-green-700 text-white transition-colors"
+            {record.admittedStudentId ? (
+              <Link
+                href={`/admin/students/${encodeId(record.admittedStudentId)}`}
+                className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium bg-green-600 hover:bg-green-700 text-white transition-colors"
               >
-                🎓 Mark admitted
-              </button>
-            </form>
-          )}
+                Open admission →
+              </Link>
+            ) : (
+              <form action={markAdmitted} className="flex items-end gap-2">
+                <input type="hidden" name="id" value={record.id} />
+                <label className="block">
+                  <span className="block text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">
+                    Admission date
+                  </span>
+                  <input
+                    type="date"
+                    name="admissionDate"
+                    defaultValue={todayStr()}
+                    max={todayStr()}
+                    className="h-9 px-2.5 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </label>
+                <PendingButton variant="success" pendingText="Admitting…">
+                  🎓 Mark admitted
+                </PendingButton>
+              </form>
+            )}
+          </div>
         </div>
 
         {/* Dynamic student link */}
@@ -146,20 +158,22 @@ export default async function EditProfilePage({
             <CopyLinkButton path={profilePath} label="Copy link" />
             <form action={regenerateLink}>
               <input type="hidden" name="id" value={record.id} />
-              <button
-                type="submit"
+              <PendingButton
+                pendingText="Regenerating…"
                 className="text-sm text-text-secondary hover:text-text-primary"
-                title="Old link stops working"
               >
                 Regenerate
-              </button>
+              </PendingButton>
             </form>
           </div>
         </div>
       </Card>
 
-      <ProfileForm
+      <ProfileDetails
         record={record}
+        universityName={row.universityName}
+        courseName={row.courseName}
+        assignedToName={row.assignedToName}
         universityOptions={universityOptions}
         courses={courses}
         staffOptions={staffOptions}

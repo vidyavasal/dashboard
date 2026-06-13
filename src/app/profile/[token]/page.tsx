@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { studentProfiles } from "@/lib/db/schema";
 import { getUniversityOptions, getCourseOptions } from "@/lib/lookups";
 import { ProfileFields } from "@/components/profiles/ProfileFields";
+import { PendingButton } from "@/components/PendingButton";
 import { submitProfile } from "./actions";
 
 // PUBLIC page — the per-student dynamic link shared after a lead converts.
@@ -88,12 +89,12 @@ export default async function PublicProfilePage({
                 universityOptions={universityOptions}
                 courses={courses}
               />
-              <button
-                type="submit"
-                className="w-full rounded-lg bg-primary hover:bg-primary-hover text-white px-4 py-2.5 text-sm font-medium transition-colors"
+              <PendingButton
+                pendingText="Saving…"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary hover:bg-primary-hover text-white px-4 py-2.5 text-sm font-medium transition-colors"
               >
                 Save my profile
-              </button>
+              </PendingButton>
             </form>
           </div>
         )}

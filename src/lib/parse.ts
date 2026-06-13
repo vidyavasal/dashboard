@@ -26,3 +26,38 @@ export function bool(fd: FormData, key: string): boolean {
   const v = fd.get(key);
   return v === "on" || v === "true" || v === "1";
 }
+
+/**
+ * Parse a hidden JSON-array field (used for the qualifications + documents
+ * repeaters). Returns null when blank/invalid/empty so the JSONB column stays
+ * null rather than storing "[]".
+ */
+export function jsonArray<T = unknown>(fd: FormData, key: string): T[] | null {
+  const s = str(fd, key);
+  if (s === null) return null;
+  try {
+    const parsed = JSON.parse(s);
+    return Array.isArray(parsed) && parsed.length > 0 ? (parsed as T[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Date input (YYYY-MM-DD) that must NOT be in the future — server-side twin
+ * of the `max={today}` HTML constraint, so it holds even if the client
+ * validation is bypassed.
+ */
+export function pastDate(fd: FormData, key: string, label = key): string | null {
+  const s = str(fd, key);
+  if (s === null) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    throw new Error(`Invalid date for ${label}.`);
+  }
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  if (s > today) {
+    throw new Error(`${label} cannot be in the future.`);
+  }
+  return s;
+}

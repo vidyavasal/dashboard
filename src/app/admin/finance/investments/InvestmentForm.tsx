@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Card, SubmitButton } from "@/components/ui";
 import { FormField, MoneyInput, TextAreaField } from "@/components/form";
+import { todayStr } from "@/lib/dates";
 import { saveInvestment } from "./actions";
 import type { Investment } from "@/lib/db/schema";
 
@@ -14,7 +15,8 @@ export function InvestmentForm({ record }: { record?: Investment }) {
             label="Date"
             name="investmentDate"
             type="date"
-            defaultValue={record?.investmentDate}
+            defaultValue={record?.investmentDate ?? todayStr()}
+            max={todayStr()}
           />
           <FormField
             label="Partner"

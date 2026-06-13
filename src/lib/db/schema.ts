@@ -8,6 +8,7 @@ import {
   numeric,
   date,
   integer,
+  jsonb,
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
@@ -343,6 +344,25 @@ export const trackerLeads = pgTable(
 // COPY is written to tracker_students (the internal admissions ledger) and
 // linked back via admitted_student_id.
 // ---------------------------------------------------------------------------
+// A single prior-qualification row (10th / 10+2 / graduation …). Stored as a
+// JSONB array on the profile so UG (3 rows) and PG (4+ rows) both fit without
+// extra tables.
+export type QualificationRow = {
+  level: string; // "10th" | "10+2" | "graduation" | "pg" …
+  board?: string; // board OR university name
+  resultStatus?: string; // Passed | Awaited | Failed …
+  percentage?: string;
+  cgpa?: string;
+  year?: string;
+};
+
+// An uploaded certificate file on the profile.
+export type ProfileDocument = {
+  type: string; // e.g. "10th marksheet", "Aadhaar", "Photo"
+  url: string;
+  uploadedAt?: string; // ISO
+};
+
 export const studentProfiles = pgTable(
   "tracker_student_profiles",
   {
@@ -375,6 +395,63 @@ export const studentProfiles = pgTable(
     lastQualification: varchar("last_qualification", { length: 120 }),
     yearOfPassing: varchar("year_of_passing", { length: 10 }),
     marksPercent: varchar("marks_percent", { length: 20 }),
+    // ---- University-portal fields (collected to paste into the official
+    // university application portal; see "filling mode" copy view) ----------
+    // Program / specialization extras (course already holds the main program).
+    specializationType: varchar("specialization_type", { length: 20 }), // Single | Dual
+    specialization: varchar("specialization", { length: 255 }),
+    // Personal details the portal asks for.
+    areaType: varchar("area_type", { length: 20 }), // Rural | Urban
+    fatherName: varchar("father_name", { length: 255 }),
+    motherName: varchar("mother_name", { length: 255 }),
+    annualIncome: varchar("annual_income", { length: 30 }),
+    nationality: varchar("nationality", { length: 60 }),
+    religion: varchar("religion", { length: 60 }),
+    bloodGroup: varchar("blood_group", { length: 10 }),
+    category: varchar("category", { length: 30 }), // General | OBC | SC | ST | …
+    // NOTE: Aadhaar is sensitive PII (Aadhaar Act). Stored plain for now so
+    // staff can copy it into the portal; wrap in env-key encryption-at-rest in
+    // the credential-vault phase.
+    aadhaarNumber: varchar("aadhaar_number", { length: 20 }),
+    abcId: varchar("abc_id", { length: 30 }),
+    studentOccupation: varchar("student_occupation", { length: 120 }),
+    studentOccupationDetails: varchar("student_occupation_details", {
+      length: 255,
+    }),
+    // Contact person (parent/guardian) the portal records.
+    contactPerson: varchar("contact_person", { length: 30 }), // Mother | Father | Self
+    contactMobile: varchar("contact_mobile", { length: 30 }),
+    contactEmail: varchar("contact_email", { length: 255 }),
+    contactOccupation: varchar("contact_occupation", { length: 120 }),
+    contactOccupationDetails: varchar("contact_occupation_details", {
+      length: 255,
+    }),
+    // Permanent address (the existing address/district/state/pincode columns
+    // above ARE the permanent address; these add the missing pieces).
+    permCity: varchar("perm_city", { length: 120 }),
+    permCountry: varchar("perm_country", { length: 60 }),
+    // Correspondence address.
+    corrSameAsPermanent: boolean("corr_same_as_permanent").default(true),
+    corrAddress: text("corr_address"),
+    corrCity: varchar("corr_city", { length: 120 }),
+    corrDistrict: varchar("corr_district", { length: 120 }),
+    corrState: varchar("corr_state", { length: 120 }),
+    corrCountry: varchar("corr_country", { length: 60 }),
+    corrPincode: varchar("corr_pincode", { length: 10 }),
+    // Qualification rows (10th / 10+2 / graduation …) — varies UG vs PG.
+    qualifications: jsonb("qualifications").$type<QualificationRow[]>(),
+    // Uploaded certificate files (step-by-step in the student form).
+    documents: jsonb("documents").$type<ProfileDocument[]>(),
+    // The per-student university application link, e.g.
+    // https://apply.glaonline.com/dashboard.aspx?type=…
+    universityPortalUrl: text("university_portal_url"),
+    // University student-portal login — ENCRYPTED vault. The password is
+    // AES-256-GCM ciphertext whose key is derived from the memorized admin
+    // passphrase (scrypt) + env pepper; it cannot be read without the
+    // passphrase. Username/note kept readable for staff convenience.
+    portalUsername: varchar("portal_username", { length: 255 }),
+    portalPasswordEnc: text("portal_password_enc"),
+    portalCredNote: text("portal_cred_note"),
     documentsNote: text("documents_note"),
     notes: text("notes"),
     assignedToId: uuid("assigned_to_id").references(() => staff.id, {

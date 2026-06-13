@@ -18,10 +18,9 @@ import {
   StatusBadge,
 } from "@/components/ui";
 import { Pagination, parsePagination } from "@/components/Pagination";
-import { DeleteButton } from "@/components/DeleteButton";
 import { formatDate } from "@/lib/format";
-import { deleteLead, convertLead } from "./actions";
 import { LeadFilters } from "./LeadFilters";
+import { encodeId } from "@/lib/ids";
 
 export const metadata = { title: "Leads" };
 
@@ -30,7 +29,7 @@ export default async function LeadsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await requireSession();
+  await requireSession();
   const sp = await searchParams;
   const filters = parseLeadFilters(sp);
   const { page, pageSize } = parsePagination(sp);
@@ -44,7 +43,6 @@ export default async function LeadsPage({
     ]);
 
   const params = leadFilterParams(filters);
-  const canDelete = session.role !== "sales";
 
   const exportQs = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) if (v) exportQs.set(k, v);
@@ -119,37 +117,20 @@ export default async function LeadsPage({
             <Td>{r.assignedToName ?? "—"}</Td>
             <Td align="right">
               <div className="flex items-center justify-end gap-3">
-                {r.convertedProfileId ? (
+                {r.convertedProfileId && (
                   <Link
-                    href={`/admin/profiles/${r.convertedProfileId}`}
+                    href={`/admin/profiles/${encodeId(r.convertedProfileId)}`}
                     className="text-sm text-green-700 hover:underline whitespace-nowrap"
                   >
                     Profile →
                   </Link>
-                ) : (
-                  <form action={convertLead}>
-                    <input type="hidden" name="id" value={r.id} />
-                    <button
-                      type="submit"
-                      className="text-sm text-green-700 hover:underline"
-                    >
-                      Convert
-                    </button>
-                  </form>
                 )}
                 <Link
-                  href={`/admin/leads/${r.id}`}
-                  className="text-sm text-primary hover:underline"
+                  href={`/admin/leads/${encodeId(r.id)}`}
+                  className="text-sm text-primary hover:underline whitespace-nowrap"
                 >
-                  Edit
+                  View details
                 </Link>
-                {canDelete && (
-                  <DeleteButton
-                    id={r.id}
-                    action={deleteLead}
-                    confirm={`Delete lead ${r.name}?`}
-                  />
-                )}
               </div>
             </Td>
           </tr>

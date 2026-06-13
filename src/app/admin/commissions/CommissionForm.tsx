@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { Card, SubmitButton } from "@/components/ui";
 import { MoneyInput, SelectField, FormField } from "@/components/form";
@@ -7,9 +9,12 @@ import type { UniversityCommission } from "@/lib/db/schema";
 export function CommissionForm({
   record,
   universityOptions,
+  onCancel,
 }: {
   record?: UniversityCommission;
   universityOptions: { value: string; label: string }[];
+  /** When set (details page), Cancel exits edit mode instead of navigating. */
+  onCancel?: () => void;
 }) {
   return (
     <Card className="p-6">
@@ -37,12 +42,22 @@ export function CommissionForm({
         />
         <div className="flex items-center gap-3 pt-2">
           <SubmitButton>{record ? "Save changes" : "Save"}</SubmitButton>
-          <Link
-            href="/admin/commissions"
-            className="text-sm text-text-secondary hover:text-text-primary"
-          >
-            Cancel
-          </Link>
+          {onCancel ? (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="text-sm text-text-secondary hover:text-text-primary"
+            >
+              Cancel
+            </button>
+          ) : (
+            <Link
+              href="/admin/commissions"
+              className="text-sm text-text-secondary hover:text-text-primary"
+            >
+              Cancel
+            </Link>
+          )}
         </div>
       </form>
     </Card>

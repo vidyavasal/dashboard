@@ -3,8 +3,7 @@ import { asc, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { universities, courses } from "@/lib/db/external";
 import { requireRole } from "@/lib/session";
-import { DeleteButton } from "@/components/DeleteButton";
-import { deleteUniversity } from "./actions";
+import { encodeId } from "@/lib/ids";
 
 export default async function AdminUniversitiesPage() {
   await requireRole("owner", "staff");
@@ -113,16 +112,11 @@ export default async function AdminUniversitiesPage() {
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-3">
                     <Link
-                      href={`/admin/content/universities/${uni.id}`}
+                      href={`/admin/content/universities/${encodeId(uni.id)}`}
                       className="px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                     >
                       Edit
                     </Link>
-                    <DeleteButton
-                      id={uni.id}
-                      action={deleteUniversity}
-                      confirm={`Delete ${uni.name}? This also removes its courses on the public site.`}
-                    />
                   </div>
                 </td>
               </tr>

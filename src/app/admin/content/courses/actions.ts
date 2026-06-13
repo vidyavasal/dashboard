@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { courses, courseFeeStructures } from "@/lib/db/external";
 import { requireRole } from "@/lib/session";
+import { encodeId } from "@/lib/ids";
 
 export interface CourseFormData {
   name: string;
@@ -87,7 +88,7 @@ export async function saveCourse(id: string, data: CourseFormData) {
   }
 
   revalidatePath("/admin/content/courses");
-  revalidatePath(`/admin/content/courses/${id}`);
+  revalidatePath(`/admin/content/courses/${encodeId(id)}`);
 }
 
 export async function createCourse(formData: FormData) {
@@ -111,7 +112,7 @@ export async function createCourse(formData: FormData) {
     .returning({ id: courses.id });
 
   revalidatePath("/admin/content/courses");
-  redirect(`/admin/content/courses/${created.id}`);
+  redirect(`/admin/content/courses/${encodeId(created.id)}`);
 }
 
 export async function deleteCourse(formData: FormData) {

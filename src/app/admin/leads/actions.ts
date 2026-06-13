@@ -10,6 +10,7 @@ import { requireSession, requireRole } from "@/lib/session";
 import { reqStr, str } from "@/lib/parse";
 import { parseCsv } from "@/lib/csv";
 import { generateFormToken } from "@/lib/token";
+import { encodeId } from "@/lib/ids";
 import {
   LEAD_IMPORT_COLUMNS,
   LEAD_STATUS_VALUES,
@@ -59,7 +60,32 @@ export async function saveLead(formData: FormData) {
   }
 
   revalidatePath("/admin/leads");
-  redirect("/admin/leads");
+  // Edits return to the lead's details page; new leads go to the list.
+  redirect(id ? `/admin/leads/${encodeId(id)}` : "/admin/leads");
+}
+
+/** Quick status change from the lead details page (no full edit). */
+export async function updateLeadStatus(formData: FormData) {
+  await requireSession();
+  const id = reqStr(formData, "id");
+  const status = str(formData, "status") ?? "new";
+  const subStatus = str(formData, "subStatus");
+
+  await db
+    .update(trackerLeads)
+    .set({
+      status: LEAD_STATUS_VALUES.includes(status) ? status : "new",
+      subStatus:
+        subStatus && subStatusesFor(status).includes(subStatus)
+          ? subStatus
+          : null,
+      followUpDate: str(formData, "followUpDate"),
+      updatedAt: new Date(),
+    })
+    .where(eq(trackerLeads.id, id));
+
+  revalidatePath("/admin/leads");
+  revalidatePath(`/admin/leads/${encodeId(id)}`);
 }
 
 export async function deleteLead(formData: FormData) {
@@ -67,6 +93,7 @@ export async function deleteLead(formData: FormData) {
   const id = reqStr(formData, "id");
   await db.delete(trackerLeads).where(eq(trackerLeads.id, id));
   revalidatePath("/admin/leads");
+  redirect("/admin/leads");
 }
 
 /**
@@ -91,7 +118,7 @@ export async function convertLead(formData: FormData) {
     .where(eq(studentProfiles.leadId, id))
     .limit(1);
   if (existing) {
-    redirect(`/admin/profiles/${existing.id}`);
+    redirect(`/admin/profiles/${encodeId(existing.id)}`);
   }
 
   const [profile] = await db
@@ -119,7 +146,7 @@ export async function convertLead(formData: FormData) {
 
   revalidatePath("/admin/leads");
   revalidatePath("/admin/profiles");
-  redirect(`/admin/profiles/${profile.id}`);
+  redirect(`/admin/profiles/${encodeId(profile.id)}`);
 }
 
 // ── CSV import ───────────────────────────────────────────────────────────────

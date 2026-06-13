@@ -13,6 +13,7 @@ import {
 } from "@/lib/db/analytics";
 import { PageHeader, Card, Table, Th, Td, StatusBadge } from "@/components/ui";
 import { formatDate } from "@/lib/format";
+import { encodeId } from "@/lib/ids";
 
 export const dynamic = "force-dynamic";
 
@@ -219,7 +220,7 @@ export default async function AnalyticsPage() {
               <Td>{formatDate(l.createdAt)}</Td>
               <Td align="right">
                 {l.visitorId && (
-                  <Link href={`/admin/analytics/visitor/${l.visitorId}`} className="text-primary hover:underline">
+                  <Link href={`/admin/analytics/visitor/${encodeId(l.visitorId)}`} className="text-primary hover:underline">
                     Journey →
                   </Link>
                 )}

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { invoices, invoiceItems } from "@/lib/db/schema";
 import { requireRole } from "@/lib/session";
 import InvoiceEditForm from "./InvoiceEditForm";
+import { decodeId } from "@/lib/ids";
 
 export default async function EditInvoicePage({
   params,
@@ -11,7 +12,9 @@ export default async function EditInvoicePage({
   params: Promise<{ id: string }>;
 }) {
   await requireRole("owner", "staff");
-  const { id } = await params;
+  const { id: idToken } = await params;
+  const id = decodeId(idToken);
+  if (!id) notFound();
 
   const [invoice] = await db
     .select()
@@ -26,5 +29,5 @@ export default async function EditInvoicePage({
     .where(eq(invoiceItems.invoiceId, id))
     .orderBy(asc(invoiceItems.sortOrder));
 
-  return <InvoiceEditForm invoice={invoice} items={items} />;
+  return <InvoiceEditForm invoice={invoice} items={items} idToken={idToken} />;
 }

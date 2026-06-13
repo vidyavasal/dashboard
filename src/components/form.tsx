@@ -8,6 +8,9 @@ export function FormField({
   required = false,
   placeholder,
   step,
+  min,
+  max,
+  hint,
 }: {
   label: string;
   name: string;
@@ -16,6 +19,10 @@ export function FormField({
   required?: boolean;
   placeholder?: string;
   step?: string;
+  /** e.g. date window constraints (YYYY-MM-DD for type="date"). */
+  min?: string;
+  max?: string;
+  hint?: string;
 }) {
   return (
     <label className="block">
@@ -27,11 +34,14 @@ export function FormField({
         name={name}
         type={type}
         step={step}
+        min={min}
+        max={max}
         required={required}
         placeholder={placeholder}
         defaultValue={defaultValue ?? undefined}
         className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
       />
+      {hint && <span className="block text-xs text-text-secondary mt-1">{hint}</span>}
     </label>
   );
 }

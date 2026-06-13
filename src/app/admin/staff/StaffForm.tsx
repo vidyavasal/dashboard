@@ -1,10 +1,21 @@
+"use client";
+
 import Link from "next/link";
 import { Card, SubmitButton } from "@/components/ui";
 import { FormField, MoneyInput, SelectField } from "@/components/form";
+import { todayStr, monthsAgoStr } from "@/lib/dates";
 import { saveStaff } from "./actions";
 import type { Staff } from "@/lib/db/schema";
 
-export function StaffForm({ record }: { record?: Staff }) {
+export function StaffForm({
+  record,
+  onCancel,
+}: {
+  record?: Staff;
+  /** When set (details page), Cancel exits edit mode instead of navigating. */
+  onCancel?: () => void;
+}) {
+  const today = todayStr();
   return (
     <Card className="p-6">
       <form action={saveStaff} className="space-y-4">
@@ -31,7 +42,12 @@ export function StaffForm({ record }: { record?: Staff }) {
             label="Join date"
             name="joinDate"
             type="date"
-            defaultValue={record?.joinDate}
+            defaultValue={record?.joinDate ?? today}
+            // New staff: today or up to one month back — never a future date.
+            // Editing keeps older historical join dates valid.
+            min={record ? undefined : monthsAgoStr(1)}
+            max={today}
+            hint={record ? undefined : "Today or up to 1 month back."}
           />
           <SelectField
             label="Status"
@@ -51,12 +67,22 @@ export function StaffForm({ record }: { record?: Staff }) {
         </div>
         <div className="flex items-center gap-3 pt-2">
           <SubmitButton>{record ? "Save changes" : "Add staff"}</SubmitButton>
-          <Link
-            href="/admin/staff"
-            className="text-sm text-text-secondary hover:text-text-primary"
-          >
-            Cancel
-          </Link>
+          {onCancel ? (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="text-sm text-text-secondary hover:text-text-primary"
+            >
+              Cancel
+            </button>
+          ) : (
+            <Link
+              href="/admin/staff"
+              className="text-sm text-text-secondary hover:text-text-primary"
+            >
+              Cancel
+            </Link>
+          )}
         </div>
       </form>
     </Card>

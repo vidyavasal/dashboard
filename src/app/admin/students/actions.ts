@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { students } from "@/lib/db/schema";
 import { requireSession } from "@/lib/session";
 import { getStaffIdForUser } from "@/lib/lookups";
-import { reqStr, str, num } from "@/lib/parse";
+import { reqStr, str, num, pastDate } from "@/lib/parse";
 
 /**
  * Ensure the current user is allowed to write the admission identified by `id`
@@ -40,7 +40,7 @@ export async function saveStudent(formData: FormData) {
   const { ownStaffId } = await authorizeWrite(id);
 
   const values = {
-    admissionDate: str(formData, "admissionDate"),
+    admissionDate: pastDate(formData, "admissionDate", "Admission date"),
     studentName: reqStr(formData, "studentName"),
     phone: str(formData, "phone"),
     universityId: str(formData, "universityId"),

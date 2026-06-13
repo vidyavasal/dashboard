@@ -21,11 +21,14 @@ export function ProfileForm({
   universityOptions,
   courses,
   staffOptions,
+  onCancel,
 }: {
   record: StudentProfile;
   universityOptions: Option[];
   courses: CourseOption[];
   staffOptions: Option[];
+  /** When set (details page), Cancel exits edit mode instead of navigating. */
+  onCancel?: () => void;
 }) {
   return (
     <Card className="p-6">
@@ -87,12 +90,22 @@ export function ProfileForm({
 
         <div className="flex items-center gap-3 pt-2">
           <SubmitButton>Save profile</SubmitButton>
-          <Link
-            href="/admin/profiles"
-            className="text-sm text-text-secondary hover:text-text-primary"
-          >
-            Cancel
-          </Link>
+          {onCancel ? (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="text-sm text-text-secondary hover:text-text-primary"
+            >
+              Cancel
+            </button>
+          ) : (
+            <Link
+              href="/admin/profiles"
+              className="text-sm text-text-secondary hover:text-text-primary"
+            >
+              Cancel
+            </Link>
+          )}
         </div>
       </form>
     </Card>

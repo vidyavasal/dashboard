@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { count, desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { salaries, staff } from "@/lib/db/schema";
@@ -11,27 +11,38 @@ import {
   Td,
   StatusBadge,
 } from "@/components/ui";
-import { DeleteButton } from "@/components/DeleteButton";
 import { formatMoney, monthLabel } from "@/lib/format";
-import { deleteSalary, togglePaid } from "./actions";
+import { Pagination, parsePagination } from "@/components/Pagination";
+import { togglePaid } from "./actions";
+import { encodeId } from "@/lib/ids";
 
-export default async function SalariesPage() {
+export default async function SalariesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   await requireRole("owner");
+  const { page, pageSize } = parsePagination(await searchParams);
 
-  const rows = await db
-    .select({
-      id: salaries.id,
-      staffName: staff.name,
-      month: salaries.month,
-      baseSalary: salaries.baseSalary,
-      incentive: salaries.incentive,
-      bonus: salaries.bonus,
-      totalPayable: salaries.totalPayable,
-      paid: salaries.paid,
-    })
-    .from(salaries)
-    .leftJoin(staff, eq(salaries.staffId, staff.id))
-    .orderBy(desc(salaries.month));
+  const [rows, [{ n: totalRows }]] = await Promise.all([
+    db
+      .select({
+        id: salaries.id,
+        staffName: staff.name,
+        month: salaries.month,
+        baseSalary: salaries.baseSalary,
+        incentive: salaries.incentive,
+        bonus: salaries.bonus,
+        totalPayable: salaries.totalPayable,
+        paid: salaries.paid,
+      })
+      .from(salaries)
+      .leftJoin(staff, eq(salaries.staffId, staff.id))
+      .orderBy(desc(salaries.month))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize),
+    db.select({ n: count() }).from(salaries),
+  ]);
 
   return (
     <>
@@ -81,21 +92,23 @@ export default async function SalariesPage() {
             <Td align="right">
               <div className="flex items-center justify-end gap-3">
                 <Link
-                  href={`/admin/finance/salaries/${r.id}`}
+                  href={`/admin/finance/salaries/${encodeId(r.id)}`}
                   className="text-sm text-primary hover:underline"
                 >
                   Edit
                 </Link>
-                <DeleteButton
-                  id={r.id}
-                  action={deleteSalary}
-                  confirm={`Delete payroll for ${r.staffName} (${r.month})?`}
-                />
               </div>
             </Td>
           </tr>
         ))}
       </Table>
+      <Pagination
+        basePath="/admin/finance/salaries"
+        params={{}}
+        page={page}
+        pageSize={pageSize}
+        total={totalRows}
+      />
     </>
   );
 }

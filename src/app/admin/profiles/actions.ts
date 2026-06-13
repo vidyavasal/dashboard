@@ -6,9 +6,11 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { studentProfiles, students, universityCommissions } from "@/lib/db/schema";
 import { requireSession, requireRole } from "@/lib/session";
-import { reqStr, str } from "@/lib/parse";
+import { reqStr, str, pastDate } from "@/lib/parse";
+import { profileFieldsFromForm } from "@/lib/profile-fields";
 import { generateFormToken } from "@/lib/token";
 import { PROFILE_STATUS_VALUES } from "@/lib/lead-status";
+import { encodeId } from "@/lib/ids";
 
 function parseAge(raw: string | null): number | null {
   if (!raw) return null;
@@ -27,24 +29,8 @@ export async function saveProfile(formData: FormData) {
     .set({
       name: reqStr(formData, "name"),
       phone: reqStr(formData, "phone"),
-      email: str(formData, "email"),
       age: parseAge(str(formData, "age")),
-      sex: str(formData, "sex"),
-      dob: str(formData, "dob"),
-      guardianName: str(formData, "guardianName"),
-      guardianPhone: str(formData, "guardianPhone"),
-      address: str(formData, "address"),
-      district: str(formData, "district"),
-      state: str(formData, "state"),
-      pincode: str(formData, "pincode"),
-      programLevel: str(formData, "programLevel"),
-      universityId: str(formData, "universityId"),
-      courseId: str(formData, "courseId"),
-      lastInstitution: str(formData, "lastInstitution"),
-      lastQualification: str(formData, "lastQualification"),
-      yearOfPassing: str(formData, "yearOfPassing"),
-      marksPercent: str(formData, "marksPercent"),
-      documentsNote: str(formData, "documentsNote"),
+      ...profileFieldsFromForm(formData),
       notes: str(formData, "notes"),
       assignedToId: str(formData, "assignedToId"),
       status: PROFILE_STATUS_VALUES.includes(status)
@@ -55,7 +41,29 @@ export async function saveProfile(formData: FormData) {
     .where(eq(studentProfiles.id, id));
 
   revalidatePath("/admin/profiles");
-  redirect("/admin/profiles");
+  // Return to the profile details page after editing.
+  redirect(`/admin/profiles/${encodeId(id)}`);
+}
+
+/** Quick status / assignee change from the profile details page. */
+export async function updateProfileStatus(formData: FormData) {
+  await requireSession();
+  const id = reqStr(formData, "id");
+  const status = str(formData, "status") ?? "profile_pending";
+
+  await db
+    .update(studentProfiles)
+    .set({
+      status: PROFILE_STATUS_VALUES.includes(status)
+        ? status
+        : "profile_pending",
+      assignedToId: str(formData, "assignedToId"),
+      updatedAt: new Date(),
+    })
+    .where(eq(studentProfiles.id, id));
+
+  revalidatePath("/admin/profiles");
+  revalidatePath(`/admin/profiles/${encodeId(id)}`);
 }
 
 export async function deleteProfile(formData: FormData) {
@@ -63,6 +71,21 @@ export async function deleteProfile(formData: FormData) {
   const id = reqStr(formData, "id");
   await db.delete(studentProfiles).where(eq(studentProfiles.id, id));
   revalidatePath("/admin/profiles");
+  redirect("/admin/profiles");
+}
+
+/** Save the per-student university application portal link (e.g. the
+ * apply.glaonline.com dashboard URL) used by the filling-mode copy view. */
+export async function savePortalLink(formData: FormData) {
+  await requireSession();
+  const id = reqStr(formData, "id");
+  const url = str(formData, "universityPortalUrl");
+  await db
+    .update(studentProfiles)
+    .set({ universityPortalUrl: url, updatedAt: new Date() })
+    .where(eq(studentProfiles.id, id));
+  revalidatePath(`/admin/profiles/${encodeId(id)}/fill`);
+  revalidatePath(`/admin/profiles/${encodeId(id)}`);
 }
 
 /** Invalidate a leaked/lost link by issuing a fresh token. */
@@ -73,7 +96,7 @@ export async function regenerateLink(formData: FormData) {
     .update(studentProfiles)
     .set({ formToken: generateFormToken(), updatedAt: new Date() })
     .where(eq(studentProfiles.id, id));
-  revalidatePath(`/admin/profiles/${id}`);
+  revalidatePath(`/admin/profiles/${encodeId(id)}`);
 }
 
 /**
@@ -86,7 +109,8 @@ export async function markAdmitted(formData: FormData) {
   await requireSession();
   const id = reqStr(formData, "id");
   const admissionDate =
-    str(formData, "admissionDate") ?? new Date().toISOString().slice(0, 10);
+    pastDate(formData, "admissionDate", "Admission date") ??
+    new Date().toISOString().slice(0, 10);
 
   const [profile] = await db
     .select()
@@ -97,7 +121,7 @@ export async function markAdmitted(formData: FormData) {
 
   // Idempotent: if an admission copy already exists, just finish the linkage.
   if (profile.admittedStudentId) {
-    redirect(`/admin/students/${profile.admittedStudentId}`);
+    redirect(`/admin/students/${encodeId(profile.admittedStudentId)}`);
   }
 
   // Auto-fill commission % + incentive from the university settings.
@@ -146,5 +170,5 @@ export async function markAdmitted(formData: FormData) {
   revalidatePath("/admin/students");
   // Land on the admission so fee/collected can be completed (commission &
   // profit recompute there).
-  redirect(`/admin/students/${admission.id}`);
+  redirect(`/admin/students/${encodeId(admission.id)}`);
 }

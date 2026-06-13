@@ -8,6 +8,7 @@ import {
   type CourseOption,
 } from "@/components/leads/LeadBasicFields";
 import { LEAD_STATUSES, subStatusesFor } from "@/lib/lead-status";
+import { todayStr } from "@/lib/dates";
 import { saveLead } from "./actions";
 import type { TrackerLead } from "@/lib/db/schema";
 
@@ -22,11 +23,14 @@ export function LeadForm({
   universityOptions,
   courses,
   staffOptions,
+  onCancel,
 }: {
   record?: TrackerLead;
   universityOptions: Option[];
   courses: CourseOption[];
   staffOptions: Option[];
+  /** When set (details page), Cancel exits edit mode instead of navigating. */
+  onCancel?: () => void;
 }) {
   const [status, setStatus] = useState(record?.status ?? "new");
   const subOptions = subStatusesFor(status);
@@ -103,6 +107,8 @@ export function LeadForm({
                 name="followUpDate"
                 type="date"
                 defaultValue={record?.followUpDate ?? ""}
+                // Follow-ups are scheduled ahead; existing past dates stay valid.
+                min={record ? undefined : todayStr()}
                 className={inputCls}
               />
             </label>
@@ -120,12 +126,22 @@ export function LeadForm({
 
         <div className="flex items-center gap-3 pt-2">
           <SubmitButton>{record ? "Save changes" : "Add lead"}</SubmitButton>
-          <Link
-            href="/admin/leads"
-            className="text-sm text-text-secondary hover:text-text-primary"
-          >
-            Cancel
-          </Link>
+          {onCancel ? (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="text-sm text-text-secondary hover:text-text-primary"
+            >
+              Cancel
+            </button>
+          ) : (
+            <Link
+              href="/admin/leads"
+              className="text-sm text-text-secondary hover:text-text-primary"
+            >
+              Cancel
+            </Link>
+          )}
         </div>
       </form>
     </Card>

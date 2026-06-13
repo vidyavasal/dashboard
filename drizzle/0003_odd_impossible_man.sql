@@ -1,0 +1,34 @@
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "specialization_type" varchar(20);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "specialization" varchar(255);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "area_type" varchar(20);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "father_name" varchar(255);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "mother_name" varchar(255);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "annual_income" varchar(30);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "nationality" varchar(60);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "religion" varchar(60);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "blood_group" varchar(10);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "category" varchar(30);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "aadhaar_number" varchar(20);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "abc_id" varchar(30);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "student_occupation" varchar(120);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "student_occupation_details" varchar(255);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "contact_person" varchar(30);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "contact_mobile" varchar(30);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "contact_email" varchar(255);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "contact_occupation" varchar(120);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "contact_occupation_details" varchar(255);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "perm_city" varchar(120);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "perm_country" varchar(60);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "corr_same_as_permanent" boolean DEFAULT true;--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "corr_address" text;--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "corr_city" varchar(120);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "corr_district" varchar(120);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "corr_state" varchar(120);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "corr_country" varchar(60);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "corr_pincode" varchar(10);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "qualifications" jsonb;--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "documents" jsonb;--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "university_portal_url" text;--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "portal_username" varchar(255);--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "portal_password_enc" text;--> statement-breakpoint
+ALTER TABLE "tracker_student_profiles" ADD COLUMN "portal_cred_note" text;

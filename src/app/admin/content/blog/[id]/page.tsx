@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { blogPosts } from "@/lib/db/schema";
 import { requireRole } from "@/lib/session";
 import BlogEditForm from "./BlogEditForm";
+import { decodeId } from "@/lib/ids";
 
 export default async function EditBlogPage({
   params,
@@ -11,7 +12,9 @@ export default async function EditBlogPage({
   params: Promise<{ id: string }>;
 }) {
   await requireRole("owner", "staff");
-  const { id } = await params;
+  const { id: idToken } = await params;
+  const id = decodeId(idToken);
+  if (!id) notFound();
   const [post] = await db
     .select()
     .from(blogPosts)

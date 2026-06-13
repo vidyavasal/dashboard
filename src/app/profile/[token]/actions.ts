@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { studentProfiles } from "@/lib/db/schema";
 import { reqStr, str } from "@/lib/parse";
+import { profileFieldsFromForm } from "@/lib/profile-fields";
 
 // PUBLIC action — the token IS the authorisation. A student can update their
 // profile while it is still in the data-collection stages; once it reaches
@@ -38,24 +39,8 @@ export async function submitProfile(formData: FormData) {
     .set({
       name: reqStr(formData, "name"),
       phone: reqStr(formData, "phone"),
-      email: str(formData, "email"),
       age: Number.isFinite(age as number) ? age : null,
-      sex: str(formData, "sex"),
-      dob: str(formData, "dob"),
-      guardianName: str(formData, "guardianName"),
-      guardianPhone: str(formData, "guardianPhone"),
-      address: str(formData, "address"),
-      district: str(formData, "district"),
-      state: str(formData, "state"),
-      pincode: str(formData, "pincode"),
-      programLevel: str(formData, "programLevel"),
-      universityId: str(formData, "universityId"),
-      courseId: str(formData, "courseId"),
-      lastInstitution: str(formData, "lastInstitution"),
-      lastQualification: str(formData, "lastQualification"),
-      yearOfPassing: str(formData, "yearOfPassing"),
-      marksPercent: str(formData, "marksPercent"),
-      documentsNote: str(formData, "documentsNote"),
+      ...profileFieldsFromForm(formData),
       profileSubmittedAt: new Date(),
       // First submission moves the pipeline forward; later edits keep status.
       ...(profile.status === "profile_pending"

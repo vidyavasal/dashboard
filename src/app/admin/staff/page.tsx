@@ -1,4 +1,4 @@
-import { asc } from "drizzle-orm";
+import { asc, count } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { staff } from "@/lib/db/schema";
 import { requireRole } from "@/lib/session";
@@ -10,14 +10,27 @@ import {
   Td,
   StatusBadge,
 } from "@/components/ui";
-import { DeleteButton } from "@/components/DeleteButton";
 import { formatMoney, formatDate } from "@/lib/format";
-import { deleteStaff } from "./actions";
+import { Pagination, parsePagination } from "@/components/Pagination";
 import Link from "next/link";
+import { encodeId } from "@/lib/ids";
 
-export default async function StaffPage() {
+export default async function StaffPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   await requireRole("owner");
-  const rows = await db.select().from(staff).orderBy(asc(staff.name));
+  const { page, pageSize } = parsePagination(await searchParams);
+  const [rows, [{ n: totalRows }]] = await Promise.all([
+    db
+      .select()
+      .from(staff)
+      .orderBy(asc(staff.name))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize),
+    db.select({ n: count() }).from(staff),
+  ]);
 
   return (
     <>
@@ -51,23 +64,23 @@ export default async function StaffPage() {
               <StatusBadge status={r.status} />
             </Td>
             <Td align="right">
-              <div className="flex items-center justify-end gap-3">
-                <Link
-                  href={`/admin/staff/${r.id}`}
-                  className="text-sm text-primary hover:underline"
-                >
-                  Edit
-                </Link>
-                <DeleteButton
-                  id={r.id}
-                  action={deleteStaff}
-                  confirm={`Delete ${r.name}?`}
-                />
-              </div>
+              <Link
+                href={`/admin/staff/${encodeId(r.id)}`}
+                className="text-sm text-primary hover:underline whitespace-nowrap"
+              >
+                View details
+              </Link>
             </Td>
           </tr>
         ))}
       </Table>
+      <Pagination
+        basePath="/admin/staff"
+        params={{}}
+        page={page}
+        pageSize={pageSize}
+        total={totalRows}
+      />
     </>
   );
 }

@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/session";
 import { PageHeader } from "@/components/ui";
 import { getStaffOptions } from "@/lib/lookups";
 import { SalaryForm } from "../SalaryForm";
+import { decodeId } from "@/lib/ids";
 
 export default async function EditSalaryPage({
   params,
@@ -13,7 +14,9 @@ export default async function EditSalaryPage({
   params: Promise<{ id: string }>;
 }) {
   await requireRole("owner");
-  const { id } = await params;
+  const { id: idToken } = await params;
+  const id = decodeId(idToken);
+  if (!id) notFound();
   const [record] = await db
     .select()
     .from(salaries)
