@@ -3,14 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { studentProfiles } from "@/lib/db/schema";
+import { students } from "@/lib/db/schema";
 import { requireRole } from "@/lib/session";
 import { reqStr, str } from "@/lib/parse";
 import { encryptSecret, decryptSecret, checkPassphrase } from "@/lib/crypto";
 import { encodeId } from "@/lib/ids";
 
-// Credential vault actions — gated to owner + staff. The admin passphrase is
-// the decryption key (never stored); see src/lib/crypto.ts.
+// University student-portal credential vault — lives on the ADMISSION
+// (tracker_students), entered once a portal account exists. Gated to
+// owner + staff. The admin passphrase is the decryption key (never stored);
+// see src/lib/crypto.ts.
 
 export type SaveCredState = { status: "idle" | "ok" | "error"; message?: string };
 
@@ -34,16 +36,16 @@ export async function saveCredentials(
     }
 
     await db
-      .update(studentProfiles)
+      .update(students)
       .set({
         portalUsername: username,
         portalPasswordEnc: password ? encryptSecret(password, passphrase) : null,
         portalCredNote: note,
         updatedAt: new Date(),
       })
-      .where(eq(studentProfiles.id, id));
+      .where(eq(students.id, id));
 
-    revalidatePath(`/admin/profiles/${encodeId(id)}/fill`);
+    revalidatePath(`/admin/students/${encodeId(id)}`);
     return { status: "ok", message: "Credentials saved (encrypted)." };
   } catch (e) {
     return {
@@ -73,9 +75,9 @@ export async function revealCredential(
     }
 
     const [row] = await db
-      .select({ enc: studentProfiles.portalPasswordEnc })
-      .from(studentProfiles)
-      .where(eq(studentProfiles.id, id))
+      .select({ enc: students.portalPasswordEnc })
+      .from(students)
+      .where(eq(students.id, id))
       .limit(1);
     if (!row?.enc) {
       return { status: "error", message: "No password stored." };
@@ -84,7 +86,7 @@ export async function revealCredential(
     const password = decryptSecret(row.enc, passphrase);
     // Lightweight audit trail (no plaintext logged).
     console.info(
-      `[cred-vault] reveal profile=${id} by=${session.email} at=${new Date().toISOString()}`
+      `[cred-vault] reveal student=${id} by=${session.email} at=${new Date().toISOString()}`
     );
     return { status: "ok", password };
   } catch (e) {

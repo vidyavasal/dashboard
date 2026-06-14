@@ -7,7 +7,6 @@ import { universities, courses as coursesTable } from "@/lib/db/external";
 import { requireSession } from "@/lib/session";
 import { Card } from "@/components/ui";
 import { CopyField } from "@/components/profiles/CopyField";
-import { CredentialVault } from "@/components/profiles/CredentialVault";
 import { PendingButton } from "@/components/PendingButton";
 import { decodeId, encodeId } from "@/lib/ids";
 import { savePortalLink } from "../../actions";
@@ -215,13 +214,40 @@ export default async function ProfileFillPage({
         )}
       </Section>
 
-      <Section title="University portal credentials">
-        <CredentialVault
-          profileId={p.id}
-          username={p.portalUsername}
-          note={p.portalCredNote}
-          hasPassword={!!p.portalPasswordEnc}
-        />
+      <Section title="Documents — download to re-upload in the portal">
+        {(p.documents ?? []).length === 0 ? (
+          <p className="text-sm text-text-secondary/60 italic py-1">
+            No documents uploaded yet.
+          </p>
+        ) : (
+          <div className="space-y-1.5">
+            {(p.documents ?? []).map((doc, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-3 py-1.5 border-b border-border/60 last:border-b-0"
+              >
+                <span className="flex-1 min-w-0 text-sm text-text-primary truncate">
+                  {doc.type}
+                </span>
+                <a
+                  href={doc.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-primary hover:underline"
+                >
+                  View
+                </a>
+                <a
+                  href={doc.url}
+                  download
+                  className="rounded-md bg-surface hover:bg-primary-light text-primary px-2.5 py-1 text-xs font-medium"
+                >
+                  ⬇ Download
+                </a>
+              </div>
+            ))}
+          </div>
+        )}
       </Section>
     </div>
   );

@@ -3,99 +3,99 @@
 import { useRef, useState } from "react";
 import type { ProfileDocument } from "@/lib/db/schema";
 
-// Certificate / document uploads. Each row has a label + an uploaded file URL
-// (via the shared /api/upload/image route, which accepts images and PDFs).
+// Certificate / document uploads. A FIXED set of slots — one per required
+// document — each with a single file upload. Only JPG / PNG / PDF, max 300 KB.
 // Serialised into a hidden `documents` field as JSON.
 
-const inputCls =
-  "w-full px-2.5 py-1.5 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary";
-
-// Common certificate types for quick add.
-const SUGGESTED = [
+// The documents the university portal expects. Edit this list to change slots.
+const DOC_SLOTS = [
   "Photo",
-  "Aadhaar",
+  "Signature",
+  "Aadhaar Card",
   "10th Marksheet",
   "10+2 Marksheet",
   "Graduation Marksheet",
   "Transfer Certificate",
-  "Signature",
+  "Income Certificate",
+  "Category Certificate",
 ];
+
+const ACCEPT = ["image/jpeg", "image/png", "application/pdf"];
+const ACCEPT_ATTR = ".jpg,.jpeg,.png,.pdf";
+const MAX_BYTES = 300 * 1024; // 300 KB
 
 export function DocumentsField({
   defaultValue,
 }: {
   defaultValue?: ProfileDocument[] | null;
 }) {
-  const [docs, setDocs] = useState<ProfileDocument[]>(defaultValue ?? []);
+  // Seed each slot from any existing upload of the same type.
+  const [docs, setDocs] = useState<Record<string, ProfileDocument>>(() => {
+    const map: Record<string, ProfileDocument> = {};
+    for (const type of DOC_SLOTS) {
+      const existing = defaultValue?.find((d) => d.type === type);
+      map[type] = existing ?? { type, url: "" };
+    }
+    return map;
+  });
 
-  function update(i: number, patch: Partial<ProfileDocument>) {
-    setDocs((d) => d.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));
+  function setDoc(type: string, patch: Partial<ProfileDocument>) {
+    setDocs((d) => ({ ...d, [type]: { ...d[type], ...patch } }));
   }
-  function remove(i: number) {
-    setDocs((d) => d.filter((_, idx) => idx !== i));
-  }
-  function add(type = "") {
-    setDocs((d) => [...d, { type, url: "" }]);
-  }
+
+  // Only persist slots that actually have a file.
+  const serialised = JSON.stringify(
+    Object.values(docs).filter((d) => d.url)
+  );
 
   return (
-    <div className="space-y-3">
-      <input type="hidden" name="documents" value={JSON.stringify(docs)} />
-
-      {docs.map((doc, i) => (
-        <DocRow
-          key={i}
-          doc={doc}
-          onChange={(patch) => update(i, patch)}
-          onRemove={() => remove(i)}
+    <div className="space-y-2">
+      <input type="hidden" name="documents" value={serialised} />
+      <p className="text-xs text-text-secondary">
+        JPG, PNG or PDF · max 300 KB each.
+      </p>
+      {DOC_SLOTS.map((type) => (
+        <DocSlot
+          key={type}
+          type={type}
+          doc={docs[type]}
+          onChange={(patch) => setDoc(type, patch)}
         />
       ))}
-
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => add()}
-          className="text-sm text-primary hover:underline"
-        >
-          + Add document
-        </button>
-        <span className="text-xs text-text-secondary">or quick add:</span>
-        {SUGGESTED.filter((s) => !docs.some((d) => d.type === s)).map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => add(s)}
-            className="text-xs rounded-full border border-border px-2 py-0.5 text-text-secondary hover:bg-primary-light hover:text-primary"
-          >
-            {s}
-          </button>
-        ))}
-      </div>
     </div>
   );
 }
 
-function DocRow({
+function DocSlot({
+  type,
   doc,
   onChange,
-  onRemove,
 }: {
+  type: string;
   doc: ProfileDocument;
   onChange: (patch: Partial<ProfileDocument>) => void;
-  onRemove: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 
   async function handleFile(file: File) {
-    setUploading(true);
     setError("");
+    if (!ACCEPT.includes(file.type)) {
+      setError("Only JPG, PNG or PDF.");
+      return;
+    }
+    if (file.size > MAX_BYTES) {
+      setError(`Too large (${Math.round(file.size / 1024)} KB). Max 300 KB.`);
+      return;
+    }
+    setUploading(true);
     try {
       const fd = new FormData();
       fd.append("file", file);
       fd.append("folder", "/iode/documents");
-      fd.append("fileName", file.name);
+      fd.append("fileName", `${type}-${file.name}`);
+      fd.append("maxBytes", String(MAX_BYTES));
       const res = await fetch("/api/upload/image", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Upload failed");
@@ -108,32 +108,39 @@ function DocRow({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface/40 p-3">
-      <input
-        value={doc.type}
-        onChange={(e) => onChange({ type: e.target.value })}
-        placeholder="Document name"
-        className={`${inputCls} max-w-56`}
-      />
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface/40 px-3 py-2">
+      <span className="w-44 shrink-0 text-sm font-medium text-text-primary">
+        {type}
+      </span>
       <input
         ref={inputRef}
         type="file"
-        accept="image/*,application/pdf"
+        accept={ACCEPT_ATTR}
         className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0];
           if (f) handleFile(f);
+          e.target.value = "";
         }}
       />
       {doc.url ? (
-        <a
-          href={doc.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm text-primary hover:underline"
-        >
-          ✓ View file
-        </a>
+        <>
+          <a
+            href={doc.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-primary hover:underline"
+          >
+            ✓ View
+          </a>
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="text-xs text-text-secondary hover:text-text-primary"
+          >
+            Replace
+          </button>
+        </>
       ) : (
         <button
           type="button"
@@ -141,17 +148,10 @@ function DocRow({
           onClick={() => inputRef.current?.click()}
           className="text-sm rounded-lg bg-surface border border-border px-3 py-1.5 hover:bg-primary-light hover:text-primary disabled:opacity-50"
         >
-          {uploading ? "Uploading…" : "Upload file"}
+          {uploading ? "Uploading…" : "Upload"}
         </button>
       )}
       {error && <span className="text-xs text-red-500">{error}</span>}
-      <button
-        type="button"
-        onClick={onRemove}
-        className="ml-auto text-xs text-red-500 hover:text-red-700"
-      >
-        Remove
-      </button>
     </div>
   );
 }

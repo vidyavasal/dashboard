@@ -6,7 +6,7 @@ import {
   revealCredential,
   type SaveCredState,
   type RevealState,
-} from "@/app/admin/profiles/[id]/fill/credential-actions";
+} from "@/app/admin/students/[id]/credential-actions";
 
 const inputCls =
   "w-full px-3 py-2 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary";
@@ -14,12 +14,12 @@ const labelCls =
   "block text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1";
 
 export function CredentialVault({
-  profileId,
+  studentId,
   username,
   note,
   hasPassword,
 }: {
-  profileId: string;
+  studentId: string;
   username: string | null;
   note: string | null;
   hasPassword: boolean;
@@ -64,7 +64,7 @@ export function CredentialVault({
       {/* Reveal */}
       {hasPassword && (
         <form action={revealAction} className="rounded-xl bg-surface/50 border border-border p-3 space-y-2">
-          <input type="hidden" name="id" value={profileId} />
+          <input type="hidden" name="id" value={studentId} />
           <div className="flex flex-wrap items-end gap-2">
             <label className="flex-1 min-w-48 block">
               <span className={labelCls}>Admin passphrase to reveal</span>
@@ -90,7 +90,7 @@ export function CredentialVault({
       {/* Set / update */}
       {editing ? (
         <form action={saveAction} className="rounded-xl border border-border p-3 space-y-3">
-          <input type="hidden" name="id" value={profileId} />
+          <input type="hidden" name="id" value={studentId} />
           <div className="grid sm:grid-cols-2 gap-3">
             <label className="block">
               <span className={labelCls}>Portal username</span>

@@ -11,7 +11,8 @@ import {
   getCommissionDefaults,
   getStaffIdForUser,
 } from "@/lib/lookups";
-import { PageHeader } from "@/components/ui";
+import { PageHeader, Card } from "@/components/ui";
+import { CredentialVault } from "@/components/profiles/CredentialVault";
 import { StudentDetails } from "./StudentDetails";
 import { decodeId } from "@/lib/ids";
 
@@ -76,6 +77,19 @@ export default async function StudentDetailsPage({
         commissionDefaults={commissionDefaults}
         isOwner={session.role === "owner"}
       />
+
+      <Card className="p-5 mt-4">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-text-primary mb-3">
+          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+          University portal credentials
+        </h2>
+        <CredentialVault
+          studentId={record.id}
+          username={record.portalUsername}
+          note={record.portalCredNote}
+          hasPassword={!!record.portalPasswordEnc}
+        />
+      </Card>
     </>
   );
 }

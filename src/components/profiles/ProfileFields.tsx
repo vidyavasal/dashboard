@@ -2,10 +2,17 @@
 
 import { useMemo, useState } from "react";
 import { PROGRAM_LEVELS, SEX_OPTIONS } from "@/lib/lead-status";
-import { todayStr } from "@/lib/dates";
 import type { StudentProfile } from "@/lib/db/schema";
 import { QualificationsField } from "./QualificationsField";
 import { DocumentsField } from "./DocumentsField";
+import { AddressFields } from "./AddressFields";
+
+// Minimum age 16 → latest allowed date of birth.
+function maxDobStr(): string {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 16);
+  return d.toISOString().slice(0, 10);
+}
 
 // Full student-profile fields, shared by the PUBLIC dynamic-link form
 // (/profile/<token>) and the admin profile editor. Name + mobile mandatory;
@@ -49,12 +56,18 @@ function Section({
   );
 }
 
+function Hint({ children }: { children?: React.ReactNode }) {
+  if (!children) return null;
+  return <span className="block text-xs text-text-secondary mt-1">{children}</span>;
+}
+
 function Field({
   label,
   name,
   defaultValue,
   type = "text",
   className = "",
+  hint,
   ...rest
 }: {
   label: string;
@@ -62,6 +75,7 @@ function Field({
   defaultValue?: string | number | null;
   type?: string;
   className?: string;
+  hint?: React.ReactNode;
 } & Omit<
   React.InputHTMLAttributes<HTMLInputElement>,
   "defaultValue" | "name" | "type" | "className"
@@ -76,6 +90,7 @@ function Field({
         className={inputCls}
         {...rest}
       />
+      <Hint>{hint}</Hint>
     </label>
   );
 }
@@ -86,12 +101,14 @@ function SelectField({
   defaultValue,
   options,
   className = "",
+  hint,
 }: {
   label: string;
   name: string;
   defaultValue?: string | null;
   options: string[];
   className?: string;
+  hint?: React.ReactNode;
 }) {
   return (
     <label className={`block ${className}`}>
@@ -104,6 +121,7 @@ function SelectField({
           </option>
         ))}
       </select>
+      <Hint>{hint}</Hint>
     </label>
   );
 }
@@ -132,12 +150,19 @@ export function ProfileFields({
 
   return (
     <div className="space-y-5">
+      <div className="rounded-xl bg-primary-light/60 border border-primary/20 px-4 py-3 text-sm text-text-primary">
+        📄 Please fill every detail <strong>exactly as it appears on your 10th
+        certificate / SSLC</strong> — name, parents&rsquo; names and date of
+        birth must match, as these go into the official university application.
+      </div>
+
       <Section title="Student details">
         <label className="block">
           <span className={labelCls}>
             Full name <span className="text-red-500">*</span>
           </span>
           <input name="name" required defaultValue={record?.name ?? ""} className={inputCls} />
+          <Hint>As printed on your 10th certificate / SSLC.</Hint>
         </label>
         <label className="block">
           <span className={labelCls}>
@@ -147,14 +172,24 @@ export function ProfileFields({
             name="phone"
             type="tel"
             required
-            pattern="[0-9+\-() ]{7,20}"
+            inputMode="numeric"
+            maxLength={10}
+            pattern="[6-9][0-9]{9}"
+            title="10-digit Indian mobile number"
             defaultValue={record?.phone ?? ""}
             className={inputCls}
           />
+          <Hint>10-digit mobile number.</Hint>
         </label>
         <Field label="Email" name="email" type="email" defaultValue={record?.email} />
-        <Field label="Date of birth" name="dob" type="date" defaultValue={record?.dob} max={todayStr()} />
-        <Field label="Age" name="age" type="number" defaultValue={record?.age} min={5} max={99} />
+        <Field
+          label="Date of birth"
+          name="dob"
+          type="date"
+          defaultValue={record?.dob}
+          max={maxDobStr()}
+          hint="As on your 10th certificate. Must be 16 years or older."
+        />
         <label className="block">
           <span className={labelCls}>Gender</span>
           <select name="sex" defaultValue={record?.sex ?? ""} className={inputCls}>
@@ -167,14 +202,23 @@ export function ProfileFields({
           </select>
         </label>
         <SelectField label="Area type" name="areaType" defaultValue={record?.areaType} options={AREA_TYPES} />
-        <Field label="Father's name" name="fatherName" defaultValue={record?.fatherName} />
-        <Field label="Mother's name" name="motherName" defaultValue={record?.motherName} />
-        <Field label="Annual income" name="annualIncome" defaultValue={record?.annualIncome} />
+        <Field label="Father's name" name="fatherName" defaultValue={record?.fatherName} hint="As on your 10th certificate." />
+        <Field label="Mother's name" name="motherName" defaultValue={record?.motherName} hint="As on your 10th certificate." />
+        <Field label="Annual income" name="annualIncome" defaultValue={record?.annualIncome} inputMode="numeric" />
         <Field label="Nationality" name="nationality" defaultValue={record?.nationality ?? "INDIAN"} />
         <Field label="Religion" name="religion" defaultValue={record?.religion} />
         <SelectField label="Blood group" name="bloodGroup" defaultValue={record?.bloodGroup} options={BLOOD_GROUPS} />
         <SelectField label="Category" name="category" defaultValue={record?.category} options={CATEGORIES} />
-        <Field label="Aadhaar number" name="aadhaarNumber" defaultValue={record?.aadhaarNumber} inputMode="numeric" />
+        <Field
+          label="Aadhaar number"
+          name="aadhaarNumber"
+          defaultValue={record?.aadhaarNumber}
+          inputMode="numeric"
+          maxLength={12}
+          pattern="[0-9]{12}"
+          title="12-digit Aadhaar number"
+          hint="12-digit number on your Aadhaar card."
+        />
         <Field label="ABC ID" name="abcId" defaultValue={record?.abcId} />
         <Field label="Student occupation" name="studentOccupation" defaultValue={record?.studentOccupation} />
         <Field label="Occupation details (if Other)" name="studentOccupationDetails" defaultValue={record?.studentOccupationDetails} />
@@ -182,29 +226,38 @@ export function ProfileFields({
 
       <Section title="Contact person">
         <SelectField label="Contact person" name="contactPerson" defaultValue={record?.contactPerson} options={CONTACT_PERSONS} />
-        <Field label="Contact mobile" name="contactMobile" type="tel" defaultValue={record?.contactMobile} />
+        <Field label="Contact mobile" name="contactMobile" type="tel" defaultValue={record?.contactMobile} inputMode="numeric" maxLength={10} pattern="[6-9][0-9]{9}" title="10-digit mobile number" />
         <Field label="Contact email" name="contactEmail" type="email" defaultValue={record?.contactEmail} />
         <Field label="Contact occupation" name="contactOccupation" defaultValue={record?.contactOccupation} />
         <Field label="Occupation details (if Other)" name="contactOccupationDetails" defaultValue={record?.contactOccupationDetails} />
         {/* Guardian (kept from earlier model). */}
         <Field label="Guardian name" name="guardianName" defaultValue={record?.guardianName} />
-        <Field label="Guardian mobile" name="guardianPhone" type="tel" defaultValue={record?.guardianPhone} />
+        <Field label="Guardian mobile" name="guardianPhone" type="tel" defaultValue={record?.guardianPhone} inputMode="numeric" maxLength={10} pattern="[6-9][0-9]{9}" title="10-digit mobile number" />
       </Section>
 
       <Section title="Permanent address">
-        <label className="block sm:col-span-2 lg:col-span-3">
-          <span className={labelCls}>Address</span>
-          <textarea name="address" rows={2} defaultValue={record?.address ?? ""} className={inputCls} />
-        </label>
-        <Field label="City" name="permCity" defaultValue={record?.permCity} />
-        <Field label="District" name="district" defaultValue={record?.district} />
-        <Field label="State" name="state" defaultValue={record?.state} />
-        <Field label="Country" name="permCountry" defaultValue={record?.permCountry ?? "India"} />
-        <Field label="Pincode" name="pincode" pattern="[0-9]{6}" title="6-digit pincode" defaultValue={record?.pincode} />
+        <AddressFields
+          names={{
+            address: "address",
+            city: "permCity",
+            district: "district",
+            state: "state",
+            country: "permCountry",
+            pincode: "pincode",
+          }}
+          defaults={{
+            address: record?.address,
+            city: record?.permCity,
+            district: record?.district,
+            state: record?.state,
+            country: record?.permCountry,
+            pincode: record?.pincode,
+          }}
+        />
       </Section>
 
-      <Section title="Correspondence address">
-        <label className="flex items-center gap-2 sm:col-span-2 lg:col-span-3 text-sm text-text-primary">
+      <Section title="Correspondence address" grid={false}>
+        <label className="flex items-center gap-2 text-sm text-text-primary mb-4">
           <input
             type="checkbox"
             name="corrSameAsPermanent"
@@ -215,17 +268,24 @@ export function ProfileFields({
           Same as permanent address
         </label>
         {!corrSame && (
-          <>
-            <label className="block sm:col-span-2 lg:col-span-3">
-              <span className={labelCls}>Address</span>
-              <textarea name="corrAddress" rows={2} defaultValue={record?.corrAddress ?? ""} className={inputCls} />
-            </label>
-            <Field label="City" name="corrCity" defaultValue={record?.corrCity} />
-            <Field label="District" name="corrDistrict" defaultValue={record?.corrDistrict} />
-            <Field label="State" name="corrState" defaultValue={record?.corrState} />
-            <Field label="Country" name="corrCountry" defaultValue={record?.corrCountry ?? "India"} />
-            <Field label="Pincode" name="corrPincode" pattern="[0-9]{6}" title="6-digit pincode" defaultValue={record?.corrPincode} />
-          </>
+          <AddressFields
+            names={{
+              address: "corrAddress",
+              city: "corrCity",
+              district: "corrDistrict",
+              state: "corrState",
+              country: "corrCountry",
+              pincode: "corrPincode",
+            }}
+            defaults={{
+              address: record?.corrAddress,
+              city: record?.corrCity,
+              district: record?.corrDistrict,
+              state: record?.corrState,
+              country: record?.corrCountry,
+              pincode: record?.corrPincode,
+            }}
+          />
         )}
       </Section>
 

@@ -12,12 +12,6 @@ import { generateFormToken } from "@/lib/token";
 import { PROFILE_STATUS_VALUES } from "@/lib/lead-status";
 import { encodeId } from "@/lib/ids";
 
-function parseAge(raw: string | null): number | null {
-  if (!raw) return null;
-  const n = parseInt(raw, 10);
-  return Number.isFinite(n) && n > 0 && n < 120 ? n : null;
-}
-
 export async function saveProfile(formData: FormData) {
   await requireSession();
   const id = reqStr(formData, "id");
@@ -29,7 +23,6 @@ export async function saveProfile(formData: FormData) {
     .set({
       name: reqStr(formData, "name"),
       phone: reqStr(formData, "phone"),
-      age: parseAge(str(formData, "age")),
       ...profileFieldsFromForm(formData),
       notes: str(formData, "notes"),
       assignedToId: str(formData, "assignedToId"),

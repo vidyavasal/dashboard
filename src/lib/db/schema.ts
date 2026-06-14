@@ -116,6 +116,13 @@ export const students = pgTable(
     incentive: numeric("incentive", { precision: 12, scale: 2 }),
     paymentStatus: varchar("payment_status", { length: 30 }).default("pending"), // paid | pending | partial
     notes: text("notes"),
+    // University student-portal login — ENCRYPTED vault. The password is
+    // AES-256-GCM ciphertext whose key is derived from the memorized admin
+    // passphrase (scrypt) + env pepper; it cannot be read without the
+    // passphrase. Entered here on the admission once the portal account exists.
+    portalUsername: varchar("portal_username", { length: 255 }),
+    portalPasswordEnc: text("portal_password_enc"),
+    portalCredNote: text("portal_cred_note"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
@@ -445,13 +452,6 @@ export const studentProfiles = pgTable(
     // The per-student university application link, e.g.
     // https://apply.glaonline.com/dashboard.aspx?type=…
     universityPortalUrl: text("university_portal_url"),
-    // University student-portal login — ENCRYPTED vault. The password is
-    // AES-256-GCM ciphertext whose key is derived from the memorized admin
-    // passphrase (scrypt) + env pepper; it cannot be read without the
-    // passphrase. Username/note kept readable for staff convenience.
-    portalUsername: varchar("portal_username", { length: 255 }),
-    portalPasswordEnc: text("portal_password_enc"),
-    portalCredNote: text("portal_cred_note"),
     documentsNote: text("documents_note"),
     notes: text("notes"),
     assignedToId: uuid("assigned_to_id").references(() => staff.id, {

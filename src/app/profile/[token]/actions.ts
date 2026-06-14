@@ -12,11 +12,35 @@ import { profileFieldsFromForm } from "@/lib/profile-fields";
 // profile while it is still in the data-collection stages; once it reaches
 // admission processing the form locks (staff edit from the admin panel).
 
-const STUDENT_EDITABLE_STATUSES = [
-  "profile_pending",
-  "profile_submitted",
-  "docs_pending",
-];
+// The student may only edit while the profile is still PENDING. Once they
+// submit (status → profile_submitted) the link becomes view-only; from then on
+// changes are made by staff in the admin panel.
+const STUDENT_EDITABLE_STATUSES = ["profile_pending"];
+
+/** Server-side data-quality checks (twins of the HTML field constraints). */
+function validatePublicProfile(fd: FormData) {
+  const mobile = /^[6-9]\d{9}$/;
+  const phone = str(fd, "phone");
+  if (phone && !mobile.test(phone)) {
+    throw new Error("Enter a valid 10-digit mobile number.");
+  }
+  const contactMobile = str(fd, "contactMobile");
+  if (contactMobile && !mobile.test(contactMobile)) {
+    throw new Error("Enter a valid 10-digit contact mobile number.");
+  }
+  const aadhaar = str(fd, "aadhaarNumber");
+  if (aadhaar && !/^\d{12}$/.test(aadhaar)) {
+    throw new Error("Aadhaar must be a 12-digit number.");
+  }
+  const dob = str(fd, "dob");
+  if (dob) {
+    const cutoff = new Date();
+    cutoff.setFullYear(cutoff.getFullYear() - 16);
+    if (new Date(dob) > cutoff) {
+      throw new Error("Student must be at least 16 years old.");
+    }
+  }
+}
 
 export async function submitProfile(formData: FormData) {
   const token = reqStr(formData, "token");
@@ -31,21 +55,17 @@ export async function submitProfile(formData: FormData) {
     throw new Error("This profile can no longer be edited from this link.");
   }
 
-  const ageRaw = str(formData, "age");
-  const age = ageRaw ? parseInt(ageRaw, 10) : null;
+  validatePublicProfile(formData);
 
   await db
     .update(studentProfiles)
     .set({
       name: reqStr(formData, "name"),
       phone: reqStr(formData, "phone"),
-      age: Number.isFinite(age as number) ? age : null,
       ...profileFieldsFromForm(formData),
       profileSubmittedAt: new Date(),
-      // First submission moves the pipeline forward; later edits keep status.
-      ...(profile.status === "profile_pending"
-        ? { status: "profile_submitted" }
-        : {}),
+      // Submitting locks the link to view-only.
+      status: "profile_submitted",
       updatedAt: new Date(),
     })
     .where(eq(studentProfiles.id, profile.id));

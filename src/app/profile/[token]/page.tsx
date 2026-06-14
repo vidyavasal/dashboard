@@ -16,11 +16,9 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const STUDENT_EDITABLE_STATUSES = [
-  "profile_pending",
-  "profile_submitted",
-  "docs_pending",
-];
+// Editable from the link ONLY while pending. After the student submits, the
+// link becomes view-only (staff take over from the admin panel).
+const STUDENT_EDITABLE_STATUSES = ["profile_pending"];
 
 export default async function PublicProfilePage({
   params,
@@ -62,25 +60,11 @@ export default async function PublicProfilePage({
 
         {submitted && (
           <div className="bg-green-50 border border-green-200 text-green-800 rounded-2xl p-4 mb-4 text-sm text-center">
-            ✅ Saved! You can come back to this link and update your details
-            any time until your admission is processed.
+            ✅ Profile submitted successfully! Our team will take it from here.
           </div>
         )}
 
-        {!editable ? (
-          <div className="bg-white rounded-2xl border border-border shadow-sm p-8 text-center">
-            <div className="text-4xl mb-3">🎓</div>
-            <h2 className="text-lg font-semibold text-text-primary">
-              {profile.status === "admitted"
-                ? "Your admission is confirmed!"
-                : "This profile is being processed."}
-            </h2>
-            <p className="text-sm text-text-secondary mt-2">
-              Changes are no longer possible from this link. If anything needs
-              updating, please contact our team.
-            </p>
-          </div>
-        ) : (
+        {editable ? (
           <div className="bg-white rounded-2xl border border-border shadow-sm p-6 sm:p-8">
             <form action={submitProfile} className="space-y-5">
               <input type="hidden" name="token" value={token} />
@@ -96,6 +80,33 @@ export default async function PublicProfilePage({
                 Save my profile
               </PendingButton>
             </form>
+          </div>
+        ) : profile.status === "admitted" ? (
+          <div className="bg-white rounded-2xl border border-border shadow-sm p-8 text-center">
+            <div className="text-4xl mb-3">🎓</div>
+            <h2 className="text-lg font-semibold text-text-primary">
+              Your admission is confirmed!
+            </h2>
+            <p className="text-sm text-text-secondary mt-2">
+              Congratulations. If anything needs updating, please contact our
+              team.
+            </p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-border shadow-sm p-6 sm:p-8">
+            <div className="bg-blue-50 border border-blue-200 text-blue-800 rounded-xl p-3 mb-5 text-sm text-center">
+              ✅ Your profile has been submitted and is under review. You can
+              view your details below, but they can no longer be edited from
+              this link. Please contact our team for any changes.
+            </div>
+            {/* Read-only: a disabled fieldset locks every control inside. */}
+            <fieldset disabled className="space-y-5 opacity-90">
+              <ProfileFields
+                record={profile}
+                universityOptions={universityOptions}
+                courses={courses}
+              />
+            </fieldset>
           </div>
         )}
       </div>

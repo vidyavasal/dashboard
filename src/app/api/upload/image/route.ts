@@ -27,6 +27,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
+    // Optional caller-supplied limits (used by the document slots: JPG/PNG/PDF,
+    // 300 KB). Image uploads that omit `maxBytes` are unaffected.
+    const maxBytes = Number(formData.get("maxBytes")) || 0;
+    if (maxBytes > 0) {
+      const allowed = ["image/jpeg", "image/png", "application/pdf"];
+      if (!allowed.includes(file.type)) {
+        return NextResponse.json(
+          { error: "Only JPG, PNG or PDF allowed." },
+          { status: 400 }
+        );
+      }
+      if (file.size > maxBytes) {
+        return NextResponse.json(
+          { error: `File too large. Max ${Math.round(maxBytes / 1024)} KB.` },
+          { status: 400 }
+        );
+      }
+    }
+
     const buffer = Buffer.from(await file.arrayBuffer());
     const base64 = buffer.toString("base64");
 
