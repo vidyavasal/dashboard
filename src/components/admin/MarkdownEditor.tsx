@@ -19,7 +19,17 @@ export default function MarkdownEditor({
   folder = "/iode/content",
   height = 500,
 }: Props) {
-  // Custom toolbar command: upload an image and insert its markdown.
+  // Size presets → ImageKit width transform + public-site figure class.
+  // The public renderer styles `.md-figure--<size>` (and optional --left/--right).
+  const SIZES: Record<string, number> = {
+    full: 1600,
+    large: 1000,
+    medium: 700,
+    small: 420,
+  };
+
+  // Custom toolbar command: upload an image, pick a display size, insert a
+  // responsive <figure> the public site renders (resizable + captioned).
   const imageUploadCommand = {
     name: "image-upload",
     keyCommand: "image-upload",
@@ -48,6 +58,20 @@ export default function MarkdownEditor({
       input.onchange = async () => {
         const file = input.files?.[0];
         if (!file) return;
+
+        // Ask for a display size before uploading.
+        const choice = (
+          window.prompt(
+            "Image size? Type one of: full, large, medium, small\n(add ' left' or ' right' to wrap text beside it, e.g. \"medium right\")",
+            "large"
+          ) || "large"
+        )
+          .trim()
+          .toLowerCase();
+        const [sizeRaw, alignRaw] = choice.split(/\s+/);
+        const size = SIZES[sizeRaw] ? sizeRaw : "large";
+        const align = alignRaw === "left" || alignRaw === "right" ? alignRaw : "";
+
         const formData = new FormData();
         formData.append("file", file);
         formData.append("folder", folder);
@@ -58,9 +82,16 @@ export default function MarkdownEditor({
             body: formData,
           });
           const data = await res.json();
-          if (res.ok) {
-            api.replaceSelection(`![${file.name}](${data.url})`);
-          }
+          if (!res.ok) throw new Error();
+
+          const sep = String(data.url).includes("?") ? "&" : "?";
+          const src = `${data.url}${sep}tr=w-${SIZES[size]}`;
+          const caption = file.name.replace(/\.[a-z0-9]+$/i, "").replace(/[-_]+/g, " ");
+          const cls = `md-figure md-figure--${size}${align ? ` md-figure--${align}` : ""}`;
+
+          api.replaceSelection(
+            `\n<figure class="${cls}">\n  <img src="${src}" alt="${caption}" />\n  <figcaption>${caption}</figcaption>\n</figure>\n`
+          );
         } catch {
           alert("Image upload failed");
         }
