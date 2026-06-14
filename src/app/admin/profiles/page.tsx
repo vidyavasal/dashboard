@@ -19,10 +19,9 @@ import {
 } from "@/components/ui";
 import { Pagination, parsePagination } from "@/components/Pagination";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
-import { DeleteButton } from "@/components/DeleteButton";
 import { formatDate } from "@/lib/format";
-import { deleteProfile } from "./actions";
 import { ProfileFilters } from "./ProfileFilters";
+import { encodeId } from "@/lib/ids";
 
 export const metadata = { title: "Student profiles" };
 
@@ -31,7 +30,7 @@ export default async function ProfilesPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await requireSession();
+  await requireSession();
   const sp = await searchParams;
   const filters = parseProfileFilters(sp);
   const { page, pageSize } = parsePagination(sp);
@@ -45,7 +44,6 @@ export default async function ProfilesPage({
     ]);
 
   const params = profileFilterParams(filters);
-  const canDelete = session.role !== "sales";
 
   const exportQs = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) if (v) exportQs.set(k, v);
@@ -118,25 +116,18 @@ export default async function ProfilesPage({
                 <CopyLinkButton path={`/profile/${r.formToken}`} />
                 {r.admittedStudentId && (
                   <Link
-                    href={`/admin/students/${r.admittedStudentId}`}
+                    href={`/admin/students/${encodeId(r.admittedStudentId)}`}
                     className="text-sm text-green-700 hover:underline whitespace-nowrap"
                   >
                     Admission →
                   </Link>
                 )}
                 <Link
-                  href={`/admin/profiles/${r.id}`}
-                  className="text-sm text-primary hover:underline"
+                  href={`/admin/profiles/${encodeId(r.id)}`}
+                  className="text-sm text-primary hover:underline whitespace-nowrap"
                 >
-                  Edit
+                  View details
                 </Link>
-                {canDelete && (
-                  <DeleteButton
-                    id={r.id}
-                    action={deleteProfile}
-                    confirm={`Delete profile for ${r.name}? The lead record stays.`}
-                  />
-                )}
               </div>
             </Td>
           </tr>

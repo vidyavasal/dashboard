@@ -1,6 +1,7 @@
 import { getSession } from "@/lib/session";
 import { logoutAction } from "./login/actions";
 import { SidebarNav } from "@/components/SidebarNav";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export default async function AdminLayout({
   children,
@@ -52,7 +53,10 @@ export default async function AdminLayout({
       </aside>
 
       <main className="flex-1 min-w-0">
-        <div className="max-w-screen-2xl mx-auto px-6 py-8">{children}</div>
+        <div className="max-w-screen-2xl mx-auto px-6 py-8">
+          <Breadcrumbs />
+          {children}
+        </div>
       </main>
     </div>
   );

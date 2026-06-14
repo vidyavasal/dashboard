@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/session";
 import { getLeadJourney } from "@/lib/db/analytics";
 import { PageHeader, Card, StatusBadge } from "@/components/ui";
 import { formatDate } from "@/lib/format";
+import { decodeId } from "@/lib/ids";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,9 @@ export default async function VisitorJourneyPage({
   params: Promise<{ id: string }>;
 }) {
   await requireRole("owner");
-  const { id } = await params;
+  const { id: idToken } = await params;
+  const id = decodeId(idToken);
+  if (!id) notFound();
   const { profile, history, leads } = await getLeadJourney(id);
   if (!profile) notFound();
 

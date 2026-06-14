@@ -6,13 +6,13 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { investments } from "@/lib/db/schema";
 import { requireRole } from "@/lib/session";
-import { reqStr, str, num } from "@/lib/parse";
+import { reqStr, str, num, pastDate } from "@/lib/parse";
 
 export async function saveInvestment(formData: FormData) {
   await requireRole("owner");
   const id = str(formData, "id");
   const values = {
-    investmentDate: str(formData, "investmentDate"),
+    investmentDate: pastDate(formData, "investmentDate", "Investment date"),
     partner: str(formData, "partner"),
     amount: num(formData, "amount"),
     note: str(formData, "note"),

@@ -3,9 +3,8 @@ import { desc } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { blogPosts } from "@/lib/db/schema";
 import { requireRole } from "@/lib/session";
-import { DeleteButton } from "@/components/DeleteButton";
 import { formatDate } from "@/lib/format";
-import { deleteBlogPost } from "./actions";
+import { encodeId } from "@/lib/ids";
 
 export default async function AdminBlogPage() {
   await requireRole("owner", "staff");
@@ -86,16 +85,11 @@ export default async function AdminBlogPage() {
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-3">
                     <Link
-                      href={`/admin/content/blog/${p.id}`}
+                      href={`/admin/content/blog/${encodeId(p.id)}`}
                       className="text-xs text-blue-600 hover:underline"
                     >
                       Edit
                     </Link>
-                    <DeleteButton
-                      id={p.id}
-                      action={deleteBlogPost}
-                      confirm={`Delete "${p.title}"?`}
-                    />
                   </div>
                 </td>
               </tr>

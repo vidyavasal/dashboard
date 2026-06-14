@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { blogPosts } from "@/lib/db/schema";
 import { requireRole } from "@/lib/session";
+import { encodeId } from "@/lib/ids";
 
 export interface BlogFormData {
   title: string;
@@ -51,7 +52,7 @@ export async function saveBlogPost(id: string, data: BlogFormData) {
     .where(eq(blogPosts.id, id));
 
   revalidatePath("/admin/content/blog");
-  revalidatePath(`/admin/content/blog/${id}`);
+  revalidatePath(`/admin/content/blog/${encodeId(id)}`);
 }
 
 export async function createBlogPost(formData: FormData) {
@@ -73,7 +74,7 @@ export async function createBlogPost(formData: FormData) {
     .returning({ id: blogPosts.id });
 
   revalidatePath("/admin/content/blog");
-  redirect(`/admin/content/blog/${created.id}`);
+  redirect(`/admin/content/blog/${encodeId(created.id)}`);
 }
 
 export async function deleteBlogPost(formData: FormData) {

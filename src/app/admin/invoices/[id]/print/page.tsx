@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/session";
 import { formatMoney, formatDate, toNumber } from "@/lib/format";
 import { invoiceNumber, INVOICE_TYPE_LABELS } from "@/lib/invoice";
 import PrintButton from "./PrintButton";
+import { decodeId, encodeId } from "@/lib/ids";
 
 // Update with the real registered business details before going live.
 const BUSINESS = {
@@ -22,7 +23,9 @@ export default async function InvoicePrintPage({
   params: Promise<{ id: string }>;
 }) {
   await requireRole("owner", "staff");
-  const { id } = await params;
+  const { id: idToken } = await params;
+  const id = decodeId(idToken);
+  if (!id) notFound();
 
   const [inv] = await db
     .select()
@@ -44,7 +47,7 @@ export default async function InvoicePrintPage({
       <div className="max-w-3xl mx-auto p-8">
         <div className="print:hidden mb-6 flex items-center justify-between">
           <Link
-            href={`/admin/invoices/${inv.id}`}
+            href={`/admin/invoices/${encodeId(inv.id)}`}
             className="text-sm text-gray-500 hover:text-gray-700"
           >
             ← Back to edit

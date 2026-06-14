@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getUniversityOptions, getCourseOptions } from "@/lib/lookups";
 import { LeadBasicFields } from "@/components/leads/LeadBasicFields";
+import { PendingButton } from "@/components/PendingButton";
 import { submitLead } from "./actions";
 
 // PUBLIC page — this is the link shared with students who visit the site.
@@ -64,12 +65,12 @@ export default async function LeadFormPage({
                 Only name and mobile are required — everything else is
                 optional.
               </p>
-              <button
-                type="submit"
-                className="w-full rounded-lg bg-primary hover:bg-primary-hover text-white px-4 py-2.5 text-sm font-medium transition-colors"
+              <PendingButton
+                pendingText="Submitting…"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary hover:bg-primary-hover text-white px-4 py-2.5 text-sm font-medium transition-colors"
               >
                 Submit enquiry
-              </button>
+              </PendingButton>
             </form>
           </div>
         )}

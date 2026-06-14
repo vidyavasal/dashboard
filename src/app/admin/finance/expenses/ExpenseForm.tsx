@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Card, SubmitButton } from "@/components/ui";
 import { FormField, MoneyInput, TextAreaField } from "@/components/form";
+import { todayStr, daysAgoStr } from "@/lib/dates";
 import { saveExpense } from "./actions";
 import type { Expense } from "@/lib/db/schema";
 
@@ -14,7 +15,11 @@ export function ExpenseForm({ record }: { record?: Expense }) {
             label="Date"
             name="expenseDate"
             type="date"
-            defaultValue={record?.expenseDate}
+            defaultValue={record?.expenseDate ?? todayStr()}
+            // New expenses: today or up to one week back — never a future date.
+            min={record ? undefined : daysAgoStr(7)}
+            max={todayStr()}
+            hint={record ? undefined : "Today or up to 1 week back."}
           />
           <FormField
             label="Category"

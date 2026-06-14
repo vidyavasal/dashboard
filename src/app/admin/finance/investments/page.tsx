@@ -1,27 +1,38 @@
-import { desc } from "drizzle-orm";
+import { count, desc, sum } from "drizzle-orm";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { investments } from "@/lib/db/schema";
 import { requireRole } from "@/lib/session";
 import { PageHeader, ButtonLink, Table, Th, Td } from "@/components/ui";
-import { DeleteButton } from "@/components/DeleteButton";
 import { formatMoney, formatDate } from "@/lib/format";
-import { deleteInvestment } from "./actions";
+import { Pagination, parsePagination } from "@/components/Pagination";
+import { encodeId } from "@/lib/ids";
 
-export default async function InvestmentsPage() {
+export default async function InvestmentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   await requireRole("owner");
-  const rows = await db
-    .select()
-    .from(investments)
-    .orderBy(desc(investments.investmentDate));
+  const { page, pageSize } = parsePagination(await searchParams);
 
-  const total = rows.reduce((s, r) => s + Number(r.amount ?? 0), 0);
+  const [rows, [agg]] = await Promise.all([
+    db
+      .select()
+      .from(investments)
+      .orderBy(desc(investments.investmentDate))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize),
+    db.select({ n: count(), sum: sum(investments.amount) }).from(investments),
+  ]);
+  const totalRows = agg.n;
+  const total = Number(agg.sum ?? 0);
 
   return (
     <>
       <PageHeader
         title="Investments"
-        subtitle={`${rows.length} entries · ${formatMoney(total)} total`}
+        subtitle={`${totalRows} entries · ${formatMoney(total)} total`}
         action={
           <ButtonLink href="/admin/finance/investments/new">
             + Add investment
@@ -49,21 +60,23 @@ export default async function InvestmentsPage() {
             <Td align="right">
               <div className="flex items-center justify-end gap-3">
                 <Link
-                  href={`/admin/finance/investments/${r.id}`}
+                  href={`/admin/finance/investments/${encodeId(r.id)}`}
                   className="text-sm text-primary hover:underline"
                 >
                   Edit
                 </Link>
-                <DeleteButton
-                  id={r.id}
-                  action={deleteInvestment}
-                  confirm="Delete this investment?"
-                />
               </div>
             </Td>
           </tr>
         ))}
       </Table>
+      <Pagination
+        basePath="/admin/finance/investments"
+        params={{}}
+        page={page}
+        pageSize={pageSize}
+        total={totalRows}
+      />
     </>
   );
 }

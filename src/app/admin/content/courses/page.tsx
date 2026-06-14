@@ -3,8 +3,7 @@ import { eq, asc, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { courses, universities, courseFeeStructures } from "@/lib/db/external";
 import { requireRole } from "@/lib/session";
-import { DeleteButton } from "@/components/DeleteButton";
-import { deleteCourse } from "./actions";
+import { encodeId } from "@/lib/ids";
 
 export default async function AdminCoursesPage() {
   await requireRole("owner", "staff");
@@ -93,16 +92,11 @@ export default async function AdminCoursesPage() {
                     <td className="px-4 py-2.5 text-right">
                       <div className="flex items-center justify-end gap-3">
                         <Link
-                          href={`/admin/content/courses/${c.id}`}
+                          href={`/admin/content/courses/${encodeId(c.id)}`}
                           className="text-xs text-blue-600 hover:underline"
                         >
                           Edit
                         </Link>
-                        <DeleteButton
-                          id={c.id}
-                          action={deleteCourse}
-                          confirm={`Delete course ${c.name}?`}
-                        />
                       </div>
                     </td>
                   </tr>

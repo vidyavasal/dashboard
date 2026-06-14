@@ -14,6 +14,7 @@ import {
 import { universities, courses } from "@/lib/db/external";
 import { requireRole } from "@/lib/session";
 import { toNumber, monthLabel } from "@/lib/format";
+import { encodeId } from "@/lib/ids";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -56,7 +57,7 @@ export async function createManualInvoice(formData: FormData) {
     .returning({ id: invoices.id });
 
   revalidatePath("/admin/invoices");
-  redirect(`/admin/invoices/${created.id}`);
+  redirect(`/admin/invoices/${encodeId(created.id)}`);
 }
 
 export async function createInvoiceFromAdmission(formData: FormData) {
@@ -107,7 +108,7 @@ export async function createInvoiceFromAdmission(formData: FormData) {
   });
 
   revalidatePath("/admin/invoices");
-  redirect(`/admin/invoices/${created.id}`);
+  redirect(`/admin/invoices/${encodeId(created.id)}`);
 }
 
 export async function createInvoiceFromSalary(formData: FormData) {
@@ -166,7 +167,7 @@ export async function createInvoiceFromSalary(formData: FormData) {
   );
 
   revalidatePath("/admin/invoices");
-  redirect(`/admin/invoices/${created.id}`);
+  redirect(`/admin/invoices/${encodeId(created.id)}`);
 }
 
 // ── Save / status / delete ───────────────────────────────────────────────────
@@ -218,7 +219,7 @@ export async function saveInvoice(
   }
 
   revalidatePath("/admin/invoices");
-  revalidatePath(`/admin/invoices/${id}`);
+  revalidatePath(`/admin/invoices/${encodeId(id)}`);
 }
 
 export async function updateInvoiceStatus(formData: FormData) {
@@ -231,7 +232,7 @@ export async function updateInvoiceStatus(formData: FormData) {
     .set({ status, updatedAt: new Date() })
     .where(eq(invoices.id, id));
   revalidatePath("/admin/invoices");
-  revalidatePath(`/admin/invoices/${id}`);
+  revalidatePath(`/admin/invoices/${encodeId(id)}`);
 }
 
 export async function deleteInvoice(formData: FormData) {

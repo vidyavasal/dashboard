@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { courses, courseFeeStructures, universities } from "@/lib/db/external";
 import { requireRole } from "@/lib/session";
 import CourseEditForm from "./CourseEditForm";
+import { decodeId } from "@/lib/ids";
 
 export default async function EditCoursePage({
   params,
@@ -11,7 +12,9 @@ export default async function EditCoursePage({
   params: Promise<{ id: string }>;
 }) {
   await requireRole("owner", "staff");
-  const { id } = await params;
+  const { id: idToken } = await params;
+  const id = decodeId(idToken);
+  if (!id) notFound();
 
   const [course] = await db
     .select()

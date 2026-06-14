@@ -23,9 +23,8 @@ import {
 } from "@/components/ui";
 import { StudentFilters } from "./StudentFilters";
 import { Pagination, parsePagination } from "@/components/Pagination";
-import { DeleteButton } from "@/components/DeleteButton";
 import { formatMoney, formatDate } from "@/lib/format";
-import { deleteStudent } from "./actions";
+import { encodeId } from "@/lib/ids";
 
 export const metadata = { title: "Admissions" };
 
@@ -129,19 +128,12 @@ export default async function StudentsPage({
               <StatusBadge status={r.paymentStatus} />
             </Td>
             <Td align="right">
-              <div className="flex items-center justify-end gap-3">
-                <Link
-                  href={`/admin/students/${r.id}`}
-                  className="text-sm text-primary hover:underline"
-                >
-                  Edit
-                </Link>
-                <DeleteButton
-                  id={r.id}
-                  action={deleteStudent}
-                  confirm={`Delete admission for ${r.studentName}?`}
-                />
-              </div>
+              <Link
+                href={`/admin/students/${encodeId(r.id)}`}
+                className="text-sm text-primary hover:underline whitespace-nowrap"
+              >
+                View details
+              </Link>
             </Td>
           </tr>
         ))}

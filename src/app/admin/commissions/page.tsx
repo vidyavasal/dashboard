@@ -1,30 +1,40 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, count, eq } from "drizzle-orm";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { universityCommissions } from "@/lib/db/schema";
 import { universities } from "@/lib/db/external";
 import { requireRole } from "@/lib/session";
 import { PageHeader, ButtonLink, Table, Th, Td } from "@/components/ui";
-import { DeleteButton } from "@/components/DeleteButton";
 import { formatMoney } from "@/lib/format";
-import { deleteCommission } from "./actions";
+import { Pagination, parsePagination } from "@/components/Pagination";
+import { encodeId } from "@/lib/ids";
 
-export default async function CommissionsPage() {
+export default async function CommissionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   await requireRole("owner");
+  const { page, pageSize } = parsePagination(await searchParams);
 
-  const rows = await db
-    .select({
-      id: universityCommissions.id,
-      universityName: universities.name,
-      commissionPercent: universityCommissions.commissionPercent,
-      incentive: universityCommissions.incentivePerAdmission,
-    })
-    .from(universityCommissions)
-    .leftJoin(
-      universities,
-      eq(universityCommissions.universityId, universities.id)
-    )
-    .orderBy(asc(universities.name));
+  const [rows, [{ n: totalRows }]] = await Promise.all([
+    db
+      .select({
+        id: universityCommissions.id,
+        universityName: universities.name,
+        commissionPercent: universityCommissions.commissionPercent,
+        incentive: universityCommissions.incentivePerAdmission,
+      })
+      .from(universityCommissions)
+      .leftJoin(
+        universities,
+        eq(universityCommissions.universityId, universities.id)
+      )
+      .orderBy(asc(universities.name))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize),
+    db.select({ n: count() }).from(universityCommissions),
+  ]);
 
   return (
     <>
@@ -56,23 +66,23 @@ export default async function CommissionsPage() {
               {r.incentive ? formatMoney(r.incentive) : "—"}
             </Td>
             <Td align="right">
-              <div className="flex items-center justify-end gap-3">
-                <Link
-                  href={`/admin/commissions/${r.id}`}
-                  className="text-sm text-primary hover:underline"
-                >
-                  Edit
-                </Link>
-                <DeleteButton
-                  id={r.id}
-                  action={deleteCommission}
-                  confirm={`Remove commission for ${r.universityName}?`}
-                />
-              </div>
+              <Link
+                href={`/admin/commissions/${encodeId(r.id)}`}
+                className="text-sm text-primary hover:underline whitespace-nowrap"
+              >
+                View details
+              </Link>
             </Td>
           </tr>
         ))}
       </Table>
+      <Pagination
+        basePath="/admin/commissions"
+        params={{}}
+        page={page}
+        pageSize={pageSize}
+        total={totalRows}
+      />
     </>
   );
 }

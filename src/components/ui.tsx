@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PendingButton } from "@/components/PendingButton";
 
 // ─── Page header ─────────────────────────────────────────────────────────────
 
@@ -52,21 +53,16 @@ export function ButtonLink({
 export function SubmitButton({
   children,
   variant = "primary",
+  pendingText = "Saving…",
 }: {
   children: React.ReactNode;
   variant?: "primary" | "danger";
+  pendingText?: string;
 }) {
-  const cls =
-    variant === "danger"
-      ? "bg-red-600 hover:bg-red-700 text-white"
-      : "bg-primary hover:bg-primary-hover text-white";
   return (
-    <button
-      type="submit"
-      className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-60 ${cls}`}
-    >
+    <PendingButton variant={variant} pendingText={pendingText}>
       {children}
-    </button>
+    </PendingButton>
   );
 }
 
@@ -153,6 +149,27 @@ export function Td({
   );
 }
 
+// ─── Detail item (label over value, for read-only details views) ────────────
+
+export function DetailItem({
+  label,
+  value,
+}: {
+  label: string;
+  value?: React.ReactNode | null;
+}) {
+  return (
+    <div className="min-w-0">
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
+        {label}
+      </div>
+      <div className="text-sm text-text-primary mt-0.5 break-words">
+        {value || "—"}
+      </div>
+    </div>
+  );
+}
+
 // ─── Status badge ────────────────────────────────────────────────────────────
 
 const STATUS_STYLES: Record<string, string> = {
@@ -161,6 +178,10 @@ const STATUS_STYLES: Record<string, string> = {
   paid: "bg-green-50 text-green-700 border-green-200",
   pending: "bg-amber-50 text-amber-700 border-amber-200",
   partial: "bg-blue-50 text-blue-700 border-blue-200",
+  // Invoices
+  draft: "bg-gray-100 text-gray-600 border-gray-200",
+  issued: "bg-blue-50 text-blue-700 border-blue-200",
+  cancelled: "bg-red-50 text-red-700 border-red-200",
   // Lead pipeline (values from src/lib/lead-status.ts)
   new: "bg-blue-50 text-blue-700 border-blue-200",
   contacted: "bg-sky-50 text-sky-700 border-sky-200",

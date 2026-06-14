@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { universities } from "@/lib/db/external";
 import { requireRole } from "@/lib/session";
 import type { UniversityHighlights } from "@/components/admin/HighlightsEditor";
+import { encodeId } from "@/lib/ids";
 
 export interface UniversityFormData {
   name: string;
@@ -54,7 +55,7 @@ export async function saveUniversity(id: string, data: UniversityFormData) {
     .where(eq(universities.id, id));
 
   revalidatePath("/admin/content/universities");
-  revalidatePath(`/admin/content/universities/${id}`);
+  revalidatePath(`/admin/content/universities/${encodeId(id)}`);
 }
 
 export async function createUniversity(formData: FormData) {
@@ -76,7 +77,7 @@ export async function createUniversity(formData: FormData) {
     .returning({ id: universities.id });
 
   revalidatePath("/admin/content/universities");
-  redirect(`/admin/content/universities/${created.id}`);
+  redirect(`/admin/content/universities/${encodeId(created.id)}`);
 }
 
 export async function deleteUniversity(formData: FormData) {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Card, SubmitButton } from "@/components/ui";
 import { MoneyInput, SelectField, FormField } from "@/components/form";
+import { thisMonthStr } from "@/lib/dates";
 import { saveSalary } from "./actions";
 import type { Salary } from "@/lib/db/schema";
 
@@ -31,6 +32,7 @@ export function SalaryForm({
             type="month"
             required
             defaultValue={record?.month ?? defaultMonth}
+            max={thisMonthStr()}
           />
           <MoneyInput
             label="Base salary"

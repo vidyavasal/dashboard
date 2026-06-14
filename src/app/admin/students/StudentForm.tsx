@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Card, SubmitButton } from "@/components/ui";
 import { computeCommission } from "@/lib/commission-model";
+import { todayStr } from "@/lib/dates";
 import { saveStudent } from "./actions";
 import type { Student } from "@/lib/db/schema";
 
@@ -25,6 +26,7 @@ export function StudentForm({
   staffOptions,
   commissionDefaults,
   isOwner,
+  onCancel,
 }: {
   record?: Student;
   universityOptions: Option[];
@@ -32,6 +34,8 @@ export function StudentForm({
   staffOptions: Option[];
   commissionDefaults: CommissionDefaults;
   isOwner: boolean;
+  /** When set (details page), Cancel exits edit mode instead of navigating. */
+  onCancel?: () => void;
 }) {
   const [universityId, setUniversityId] = useState(record?.universityId ?? "");
   const [universityFee, setUniversityFee] = useState(
@@ -127,7 +131,8 @@ export function StudentForm({
             <input
               name="admissionDate"
               type="date"
-              defaultValue={record?.admissionDate ?? ""}
+              defaultValue={record?.admissionDate ?? todayStr()}
+              max={todayStr()}
               className={inputCls}
             />
           </label>
@@ -287,12 +292,22 @@ export function StudentForm({
           <SubmitButton>
             {record ? "Save changes" : "Add admission"}
           </SubmitButton>
-          <Link
-            href="/admin/students"
-            className="text-sm text-text-secondary hover:text-text-primary"
-          >
-            Cancel
-          </Link>
+          {onCancel ? (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="text-sm text-text-secondary hover:text-text-primary"
+            >
+              Cancel
+            </button>
+          ) : (
+            <Link
+              href="/admin/students"
+              className="text-sm text-text-secondary hover:text-text-primary"
+            >
+              Cancel
+            </Link>
+          )}
         </div>
       </form>
     </Card>

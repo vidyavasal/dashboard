@@ -7,6 +7,7 @@ import type { Invoice, InvoiceItem } from "@/lib/db/schema";
 import { toNumber, formatMoney } from "@/lib/format";
 import { invoiceNumber } from "@/lib/invoice";
 import { saveInvoice } from "../actions";
+import { todayStr } from "@/lib/dates";
 
 const inputCls =
   "w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500";
@@ -20,8 +21,10 @@ interface ItemRow {
 
 export default function InvoiceEditForm({
   invoice,
+  idToken,
   items: initialItems,
 }: {
+  idToken: string;
   invoice: Invoice;
   items: InvoiceItem[];
 }) {
@@ -129,7 +132,7 @@ export default function InvoiceEditForm({
             <span className="text-green-600 text-sm font-medium">✓ Saved</span>
           )}
           <Link
-            href={`/admin/invoices/${invoice.id}/print`}
+            href={`/admin/invoices/${idToken}/print`}
             target="_blank"
             className="px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
           >
@@ -178,6 +181,7 @@ export default function InvoiceEditForm({
             <input
               type="date"
               value={invoiceDate}
+              max={todayStr()}
               onChange={(e) => setInvoiceDate(e.target.value)}
               className={inputCls}
             />
@@ -189,6 +193,7 @@ export default function InvoiceEditForm({
             <input
               type="date"
               value={dueDate}
+              min={invoiceDate || undefined}
               onChange={(e) => setDueDate(e.target.value)}
               className={inputCls}
             />
