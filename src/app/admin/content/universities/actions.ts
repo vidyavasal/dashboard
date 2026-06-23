@@ -8,6 +8,15 @@ import { universities } from "@/lib/db/external";
 import { requireRole } from "@/lib/session";
 import type { UniversityHighlights } from "@/components/admin/HighlightsEditor";
 import { encodeId } from "@/lib/ids";
+import { revalidatePublicPaths } from "@/lib/revalidate";
+
+// Public-site pages that show a university: its own page, the universities
+// listing and the homepage carousel.
+function publicUniversityPaths(slug: string | null): string[] {
+  const paths = ["/", "/universities"];
+  if (slug) paths.push(`/universities/${slug}`);
+  return paths;
+}
 
 export interface UniversityFormData {
   name: string;
@@ -56,6 +65,7 @@ export async function saveUniversity(id: string, data: UniversityFormData) {
 
   revalidatePath("/admin/content/universities");
   revalidatePath(`/admin/content/universities/${encodeId(id)}`);
+  await revalidatePublicPaths(publicUniversityPaths(empty(data.slug)));
 }
 
 export async function createUniversity(formData: FormData) {
@@ -77,6 +87,7 @@ export async function createUniversity(formData: FormData) {
     .returning({ id: universities.id });
 
   revalidatePath("/admin/content/universities");
+  await revalidatePublicPaths(publicUniversityPaths(slug));
   redirect(`/admin/content/universities/${encodeId(created.id)}`);
 }
 
@@ -84,6 +95,12 @@ export async function deleteUniversity(formData: FormData) {
   await requireRole("owner", "staff");
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing id");
+  const [row] = await db
+    .select({ slug: universities.slug })
+    .from(universities)
+    .where(eq(universities.id, id))
+    .limit(1);
   await db.delete(universities).where(eq(universities.id, id));
   revalidatePath("/admin/content/universities");
+  await revalidatePublicPaths(publicUniversityPaths(row?.slug ?? null));
 }
