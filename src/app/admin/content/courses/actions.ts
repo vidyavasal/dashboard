@@ -4,9 +4,35 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { courses, courseFeeStructures } from "@/lib/db/external";
+import { courses, courseFeeStructures, universities } from "@/lib/db/external";
 import { requireRole } from "@/lib/session";
 import { encodeId } from "@/lib/ids";
+import { revalidatePublicPaths } from "@/lib/revalidate";
+
+// Public-site pages that show a course: its own page, its university page (which
+// lists course cards), the courses listing and the homepage chips. Building the
+// course detail path needs both the university slug and the course slug.
+async function publicCoursePaths(courseId: string): Promise<string[]> {
+  const [row] = await db
+    .select({ slug: courses.slug, universityId: courses.universityId })
+    .from(courses)
+    .where(eq(courses.id, courseId))
+    .limit(1);
+
+  const paths = ["/", "/courses"];
+  if (row?.universityId) {
+    const [uni] = await db
+      .select({ slug: universities.slug })
+      .from(universities)
+      .where(eq(universities.id, row.universityId))
+      .limit(1);
+    if (uni?.slug) {
+      paths.push(`/universities/${uni.slug}`);
+      if (row.slug) paths.push(`/universities/${uni.slug}/${row.slug}`);
+    }
+  }
+  return paths;
+}
 
 export interface CourseFormData {
   name: string;
@@ -89,6 +115,7 @@ export async function saveCourse(id: string, data: CourseFormData) {
 
   revalidatePath("/admin/content/courses");
   revalidatePath(`/admin/content/courses/${encodeId(id)}`);
+  await revalidatePublicPaths(await publicCoursePaths(id));
 }
 
 export async function createCourse(formData: FormData) {
@@ -112,6 +139,7 @@ export async function createCourse(formData: FormData) {
     .returning({ id: courses.id });
 
   revalidatePath("/admin/content/courses");
+  await revalidatePublicPaths(await publicCoursePaths(created.id));
   redirect(`/admin/content/courses/${encodeId(created.id)}`);
 }
 
@@ -119,6 +147,9 @@ export async function deleteCourse(formData: FormData) {
   await requireRole("owner", "staff");
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing id");
+  // Resolve the public paths before the row is gone.
+  const paths = await publicCoursePaths(id);
   await db.delete(courses).where(eq(courses.id, id));
   revalidatePath("/admin/content/courses");
+  await revalidatePublicPaths(paths);
 }
