@@ -1,7 +1,13 @@
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { courses, courseFeeStructures, universities } from "@/lib/db/external";
+import {
+  courses,
+  courseFeeStructures,
+  courseFeeBreakdowns,
+  universities,
+} from "@/lib/db/external";
+import { asc } from "drizzle-orm";
 import { requireRole } from "@/lib/session";
 import CourseEditForm from "./CourseEditForm";
 import { decodeId } from "@/lib/ids";
@@ -29,6 +35,14 @@ export default async function EditCoursePage({
     .where(eq(courseFeeStructures.courseId, id))
     .limit(1);
 
+  const breakdowns = fee
+    ? await db
+        .select()
+        .from(courseFeeBreakdowns)
+        .where(eq(courseFeeBreakdowns.feeStructureId, fee.id))
+        .orderBy(asc(courseFeeBreakdowns.sortOrder))
+    : [];
+
   const [uni] = course.universityId
     ? await db
         .select({ name: universities.name })
@@ -42,6 +56,7 @@ export default async function EditCoursePage({
       course={{
         ...course,
         feeStructure: fee ?? null,
+        breakdowns,
         universityName: uni?.name ?? null,
       }}
     />

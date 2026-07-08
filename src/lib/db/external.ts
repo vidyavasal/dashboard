@@ -24,6 +24,15 @@ import {
 // Columns are copied from the main site's src/lib/db/schema.ts.
 // ============================================================================
 
+// course_fee_structures.other_fees — arbitrary named fee components
+export type OtherFee = {
+  label: string;
+  amount: number;
+  recurrence: "one_time" | "per_year" | "per_semester";
+  // true when the amount is already included in total_fee (informational)
+  included: boolean;
+};
+
 export const adminUsers = pgTable("admin_users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: varchar("email", { length: 255 }).unique().notNull(),
@@ -45,7 +54,7 @@ export const universities = pgTable(
     logoUrl: text("logo_url"),
     bannerImage: text("banner_image"),
     galleryImages: text("gallery_images").array(),
-    highlights: jsonb("highlights"), // { naac, established, approvals, students, accreditation }
+    highlights: jsonb("highlights"), // { naac, established, approvals, students, accreditation, mode, features[], feeNote }
     content: text("content"), // markdown brochure body
     website: text("website"),
     universityType: varchar("university_type", { length: 100 }),
@@ -82,6 +91,7 @@ export const courses = pgTable(
     description: text("description"),
     content: text("content"), // markdown brochure body
     bannerImage: text("banner_image"),
+    specializations: text("specializations").array(),
     isOnline: boolean("is_online").default(true),
     isDistance: boolean("is_distance").default(false),
     tags: text("tags").array(),
@@ -108,12 +118,32 @@ export const courseFeeStructures = pgTable(
     ),
     courseFee: numeric("course_fee", { precision: 10, scale: 2 }).default("0"),
     examFee: numeric("exam_fee", { precision: 10, scale: 2 }).default("0"),
+    certificateFee: numeric("certificate_fee", {
+      precision: 10,
+      scale: 2,
+    }).default("0"),
+    processingFee: numeric("processing_fee", {
+      precision: 10,
+      scale: 2,
+    }).default("0"),
     yearlyFee: numeric("yearly_fee", { precision: 10, scale: 2 }),
     totalFee: numeric("total_fee", { precision: 10, scale: 2 }),
+    offerFee: numeric("offer_fee", { precision: 10, scale: 2 }),
+    // 'yearly' | 'semester' | 'one_time'
+    paymentCycle: varchar("payment_cycle", { length: 20 }),
+    feeOnRequest: boolean("fee_on_request").default(false),
+    // "from ₹X" first payment shown on public cards
+    startingFee: numeric("starting_fee", { precision: 10, scale: 2 }),
+    // 'per semester' | 'first year' | 'per year' | 'one-time'
+    startingFeeUnit: varchar("starting_fee_unit", { length: 30 }),
+    // [{ label, amount, recurrence: 'one_time'|'per_year'|'per_semester', included }]
+    otherFees: jsonb("other_fees").$type<OtherFee[]>(),
+    feeNote: text("fee_note"),
     currency: varchar("currency", { length: 10 }).default("INR"),
     emiAvailable: boolean("emi_available").default(false),
     metadata: jsonb("metadata"),
     createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
   },
   (table) => [index("idx_course_fee_total").on(table.totalFee)]
 );
@@ -123,6 +153,10 @@ export const courseFeeBreakdowns = pgTable("course_fee_breakdowns", {
   feeStructureId: uuid("fee_structure_id"),
   label: varchar("label", { length: 100 }),
   amount: numeric("amount", { precision: 10, scale: 2 }),
+  // 'year' | 'semester' | 'one_time'
+  periodType: varchar("period_type", { length: 20 }),
+  periodNumber: integer("period_number"),
+  note: varchar("note", { length: 255 }),
   sortOrder: integer("sort_order"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -174,6 +208,8 @@ export const leads = pgTable("leads", {
   utmSource: varchar("utm_source", { length: 120 }),
   utmMedium: varchar("utm_medium", { length: 120 }),
   utmCampaign: varchar("utm_campaign", { length: 120 }),
+  utmContent: varchar("utm_content", { length: 120 }),
+  utmTerm: varchar("utm_term", { length: 120 }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
