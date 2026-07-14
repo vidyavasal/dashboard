@@ -136,6 +136,13 @@ export const LEAD_SOURCES: { value: string; label: string }[] = [
   { value: "web_form", label: "Web form" },
   { value: "manual", label: "Manual entry" },
   { value: "csv_import", label: "CSV import" },
+  // Public-site capture points, mirrored into tracker_leads by the iode repo
+  // (src/lib/tracker-lead.ts). Values must match the site's insertLead calls.
+  { value: "fee_request", label: "Site: fee request" },
+  { value: "admission_request", label: "Site: admission request" },
+  { value: "campaign_suggest", label: "Site: campaign quiz" },
+  { value: "contact_form", label: "Site: contact form" },
+  { value: "enquiry_form", label: "Site: enquiry widget" },
 ];
 
 export function leadSourceLabel(value: string | null | undefined): string {
