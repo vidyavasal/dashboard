@@ -13,6 +13,7 @@ import {
 } from "@/lib/db/analytics";
 import { PageHeader, Card, Table, Th, Td, StatusBadge } from "@/components/ui";
 import { formatDate } from "@/lib/format";
+import { leadSourceLabel } from "@/lib/lead-status";
 import { encodeId } from "@/lib/ids";
 
 export const dynamic = "force-dynamic";
@@ -215,15 +216,28 @@ export default async function AnalyticsPage() {
               <Td>{l.name ?? "—"}</Td>
               <Td>{l.phone ?? "—"}</Td>
               <Td>{l.courseName ?? l.universityName ?? "—"}</Td>
-              <Td>{l.source ?? "—"}</Td>
+              <Td>{leadSourceLabel(l.source)}</Td>
               <Td><StatusBadge status={l.status} /></Td>
               <Td>{formatDate(l.createdAt)}</Td>
               <Td align="right">
-                {l.visitorId && (
-                  <Link href={`/admin/analytics/visitor/${encodeId(l.visitorId)}`} className="text-primary hover:underline">
-                    Journey →
-                  </Link>
-                )}
+                <div className="flex items-center justify-end gap-3">
+                  {l.phone && (
+                    <Link
+                      href={`/admin/leads?q=${encodeURIComponent(l.phone)}`}
+                      className="text-primary hover:underline whitespace-nowrap"
+                    >
+                      Lead →
+                    </Link>
+                  )}
+                  {l.visitorId && (
+                    <Link
+                      href={`/admin/analytics/visitor/${encodeId(l.visitorId)}`}
+                      className="text-primary hover:underline whitespace-nowrap"
+                    >
+                      Journey →
+                    </Link>
+                  )}
+                </div>
               </Td>
             </tr>
           ))}

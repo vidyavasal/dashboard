@@ -17,6 +17,9 @@ export default async function AdminCoursesPage() {
       deliveryMode: courses.deliveryMode,
       universityName: universities.name,
       totalFee: sql<string>`(SELECT total_fee FROM ${courseFeeStructures} WHERE course_id = ${courses.id} LIMIT 1)`,
+      startingFee: sql<string>`(SELECT starting_fee FROM ${courseFeeStructures} WHERE course_id = ${courses.id} LIMIT 1)`,
+      startingFeeUnit: sql<string>`(SELECT starting_fee_unit FROM ${courseFeeStructures} WHERE course_id = ${courses.id} LIMIT 1)`,
+      feeOnRequest: sql<boolean>`(SELECT fee_on_request FROM ${courseFeeStructures} WHERE course_id = ${courses.id} LIMIT 1)`,
     })
     .from(courses)
     .leftJoin(universities, eq(courses.universityId, universities.id))
@@ -84,10 +87,29 @@ export default async function AdminCoursesPage() {
                     <td className="px-4 py-2.5 text-gray-500 hidden md:table-cell text-xs">
                       {c.deliveryMode ?? "—"}
                     </td>
-                    <td className="px-4 py-2.5 text-gray-700 text-xs text-right">
-                      {c.totalFee
-                        ? `₹${Number(c.totalFee).toLocaleString("en-IN")}`
-                        : "—"}
+                    <td className="px-4 py-2.5 text-gray-500 hidden lg:table-cell text-xs text-right whitespace-nowrap">
+                      {c.feeOnRequest ? (
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700">
+                          On request
+                        </span>
+                      ) : c.startingFee ? (
+                        <>
+                          from ₹{Number(c.startingFee).toLocaleString("en-IN")}
+                          <span className="text-gray-400">
+                            {" "}
+                            {c.startingFeeUnit}
+                          </span>
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-gray-700 text-xs text-right whitespace-nowrap">
+                      {c.feeOnRequest
+                        ? "—"
+                        : c.totalFee
+                          ? `₹${Number(c.totalFee).toLocaleString("en-IN")}`
+                          : "—"}
                     </td>
                     <td className="px-4 py-2.5 text-right">
                       <div className="flex items-center justify-end gap-3">

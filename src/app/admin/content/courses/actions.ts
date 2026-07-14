@@ -4,7 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { courses, courseFeeStructures, universities } from "@/lib/db/external";
+import {
+  courses,
+  courseFeeStructures,
+  courseFeeBreakdowns,
+  universities,
+  type OtherFee,
+} from "@/lib/db/external";
 import { requireRole } from "@/lib/session";
 import { encodeId } from "@/lib/ids";
 import { revalidatePublicPaths } from "@/lib/revalidate";
@@ -34,6 +40,21 @@ async function publicCoursePaths(courseId: string): Promise<string[]> {
   return paths;
 }
 
+export interface BreakdownRowData {
+  label: string;
+  amount: string;
+  periodType: "year" | "semester" | "one_time";
+  periodNumber: number;
+  note: string;
+}
+
+export interface OtherFeeRowData {
+  label: string;
+  amount: string;
+  recurrence: OtherFee["recurrence"];
+  included: boolean;
+}
+
 export interface CourseFormData {
   name: string;
   shortName: string;
@@ -48,14 +69,25 @@ export interface CourseFormData {
   bannerImage: string;
   isOnline: boolean;
   isDistance: boolean;
+  specializations: string[];
   feeStructure: {
+    feeOnRequest: boolean;
+    paymentCycle: string;
     registrationFee: string;
     admissionFee: string;
+    processingFee: string;
     courseFee: string;
     examFee: string;
+    certificateFee: string;
     yearlyFee: string;
     totalFee: string;
+    offerFee: string;
+    startingFee: string;
+    startingFeeUnit: string;
+    feeNote: string;
     emiAvailable: boolean;
+    otherFees: OtherFeeRowData[];
+    breakdowns: BreakdownRowData[];
   };
 }
 
@@ -82,35 +114,81 @@ export async function saveCourse(id: string, data: CourseFormData) {
       bannerImage: empty(data.bannerImage),
       isOnline: data.isOnline,
       isDistance: data.isDistance,
+      specializations: data.specializations
+        .map((s) => s.trim())
+        .filter(Boolean),
       updatedAt: new Date(),
     })
     .where(eq(courses.id, id));
 
   // Upsert the single fee structure row for this course.
   const f = data.feeStructure;
+  const otherFees: OtherFee[] = f.otherFees
+    .filter((o) => o.label.trim() && o.amount.trim() !== "")
+    .map((o) => ({
+      label: o.label.trim(),
+      amount: Number(o.amount) || 0,
+      recurrence: o.recurrence,
+      included: o.included,
+    }));
   const feeValues = {
+    feeOnRequest: f.feeOnRequest,
+    paymentCycle: empty(f.paymentCycle),
     registrationFee: empty(f.registrationFee),
     admissionFee: empty(f.admissionFee),
+    processingFee: empty(f.processingFee),
     courseFee: empty(f.courseFee),
     examFee: empty(f.examFee),
+    certificateFee: empty(f.certificateFee),
     yearlyFee: empty(f.yearlyFee),
-    totalFee: empty(f.totalFee),
+    totalFee: f.feeOnRequest ? null : empty(f.totalFee),
+    offerFee: f.feeOnRequest ? null : empty(f.offerFee),
+    startingFee: f.feeOnRequest ? null : empty(f.startingFee),
+    startingFeeUnit: empty(f.startingFeeUnit),
+    feeNote: empty(f.feeNote),
     emiAvailable: f.emiAvailable,
+    otherFees: otherFees.length ? otherFees : null,
+    updatedAt: new Date(),
   };
   const [existing] = await db
     .select({ id: courseFeeStructures.id })
     .from(courseFeeStructures)
     .where(eq(courseFeeStructures.courseId, id))
     .limit(1);
+  let feeId: string;
   if (existing) {
+    feeId = existing.id;
     await db
       .update(courseFeeStructures)
       .set(feeValues)
-      .where(eq(courseFeeStructures.courseId, id));
+      .where(eq(courseFeeStructures.id, feeId));
   } else {
-    await db
+    const [created] = await db
       .insert(courseFeeStructures)
-      .values({ courseId: id, ...feeValues });
+      .values({ courseId: id, ...feeValues })
+      .returning({ id: courseFeeStructures.id });
+    feeId = created.id;
+  }
+
+  // Replace installment rows (no transactions on neon-http; sequential ops).
+  await db
+    .delete(courseFeeBreakdowns)
+    .where(eq(courseFeeBreakdowns.feeStructureId, feeId));
+  const rows = f.breakdowns.filter(
+    (r) => r.label.trim() && r.amount.trim() !== ""
+  );
+  if (rows.length) {
+    await db.insert(courseFeeBreakdowns).values(
+      rows.map((r, i) => ({
+        feeStructureId: feeId,
+        label: r.label.trim(),
+        amount: r.amount,
+        periodType: r.periodType,
+        periodNumber: r.periodNumber,
+        note: empty(r.note),
+        sortOrder: i,
+      }))
+    );
   }
 
   revalidatePath("/admin/content/courses");
